@@ -29,8 +29,8 @@ void SD_workstation_set_last_scheduled_task(SD_workstation_t workstation,
  */
 int nameCompareWorkstations(const void *, const void *);
 
-int getPeakAlloc();
-void resetWorkstationAttributes();
+int compute_peak_resource_usage();
+void reset_workstation_attributes();
 
 extern char* platform_file;
 
