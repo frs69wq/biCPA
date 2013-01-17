@@ -6,33 +6,22 @@
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(task, biCPA, "Logging specific to tasks");
 
+/*****************************************************************************/
+/*****************************************************************************/
+/**************          Attribute management functions         **************/
+/*****************************************************************************/
+/*****************************************************************************/
+
 void SD_task_allocate_attribute(SD_task_t task){
   TaskAttribute attr = calloc(1,sizeof(struct _TaskAttribute));
   attr->marked = 0;
   SD_task_set_data(task, attr);
 }
 
-TaskAttribute new_task_attribute(){
-  TaskAttribute attr = (TaskAttribute) calloc (1,
-                                               sizeof(struct _TaskAttribute));
-  attr->marked = 0;
-  return attr;
-}
-
 void SD_task_free_attribute(SD_task_t task){
-  free(SD_task_get_data(task));
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  free(attr);
   SD_task_set_data(task, NULL);
-}
-
-double SD_task_get_mean_cost( SD_task_t task){
-  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
-  return attr->mean_cost;
-}
-
-void SD_task_set_mean_cost(SD_task_t task, double mean_cost){
-  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
-  attr->mean_cost = mean_cost;
-  SD_task_set_data(task, attr);
 }
 
 double SD_task_get_bottom_level( SD_task_t task){
@@ -68,13 +57,13 @@ void SD_task_set_precedence_level(SD_task_t task, int precedence_level){
   SD_task_set_data(task, attr);
 }
 
-int SD_task_get_nworkstations(SD_task_t task){
+int SD_task_get_allocation_size(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
-  return attr->nworkstations;
+  return attr->allocation_size;
 }
-void SD_task_set_nworkstations(SD_task_t task, int nworkstations){
+void SD_task_set_allocation_size(SD_task_t task, int nworkstations){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
-  attr->nworkstations = nworkstations;
+  attr->allocation_size = nworkstations;
   SD_task_set_data(task, attr);
 }
 
@@ -102,7 +91,8 @@ double bottom_level_recursive_computation(SD_task_t task){
   SD_task_t child, grand_child;
   xbt_dynar_t children, grand_children;
 
-  my_bottom_level = SD_task_get_mean_cost(task);
+  //TODO Replace by the estimation of the execution on the current allocation
+  my_bottom_level = 0.0; //SD_task_get_mean_cost(task);
 
   max_bottom_level = -1.0;
   if (!strcmp(SD_task_get_name(task),"end")){
@@ -121,12 +111,10 @@ double bottom_level_recursive_computation(SD_task_t task){
       }
       xbt_dynar_get_cpy(grand_children, 0, &grand_child);
       if (SD_task_is_marked(grand_child)){
-        current_child_bottom_level = SD_task_get_bottom_level(grand_child) +
-                                     SD_task_get_mean_cost(child);
+        current_child_bottom_level = SD_task_get_bottom_level(grand_child);
       } else {
         current_child_bottom_level =
-            bottom_level_recursive_computation(grand_child) +
-            SD_task_get_mean_cost(child);
+            bottom_level_recursive_computation(grand_child);
       }
       xbt_dynar_free_container(&grand_children);
     }
@@ -170,13 +158,13 @@ double top_level_recursive_computation(SD_task_t task){
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
       if (SD_task_is_marked(grand_parent)){
         current_parent_top_level = SD_task_get_top_level(grand_parent) +
-                                   SD_task_get_mean_cost(grand_parent) +
-                                   SD_task_get_mean_cost(parent);
+            0.0; //TODO Replace by the estimation of the execution on the current allocation
+            //SD_task_get_mean_cost(grand_parent);
       } else {
         current_parent_top_level =
             top_level_recursive_computation(grand_parent) +
-            SD_task_get_mean_cost(grand_parent)+
-            SD_task_get_mean_cost(parent);
+            0.0; //TODO Replace by the estimation of the execution on the current allocation
+            //SD_task_get_mean_cost(grand_parent);
       }
     }
 

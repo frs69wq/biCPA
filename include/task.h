@@ -5,18 +5,18 @@
 
 typedef struct _TaskAttribute *TaskAttribute;
 struct _TaskAttribute {
-  int marked;
-  double mean_cost;
-  double priority;
   double bottom_level;
   double top_level;
   int precedence_level;
 
   /* The workstations onto which the node has been scheduled */
-  int nworkstations;
+  int allocation_size;
+  SD_workstation_t *allocation;
+
   //TODO have to be properly allocated and freed
   int *iterative_nworkstations;
-  SD_workstation_t  *workstations;
+
+  int marked;
 };
 
 /*
@@ -37,8 +37,8 @@ void SD_task_set_top_level(SD_task_t task, double top_level);
 int SD_task_get_precedence_level(SD_task_t task);
 void SD_task_set_precedence_level(SD_task_t task, int precedence_level);
 
-int SD_task_get_nworkstations(SD_task_t task);
-void SD_task_set_nworkstations(SD_task_t task, int nworkstations);
+int SD_task_get_allocation_size(SD_task_t task);
+void SD_task_set_allocation_size(SD_task_t task, int nworkstations);
 /*
  * Marking nodes
  */
