@@ -74,19 +74,15 @@ int main(int argc, char **argv) {
       }
       break;
     case 'b':
-      /* List of DAGs to schedule concurrently (just file names here) */
       dagfile = optarg;
       dag = SD_PTG_dotload(dagfile);
       xbt_dynar_foreach(dag, cursor, task) {
-        if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-          SD_task_watch(task, SD_DONE);
-        }
         SD_task_allocate_attribute(task);
       }
 
-      set_bottom_level (dag);
-      set_top_level (dag);
-      set_precedence_level(dag);
+      set_bottom_levels (dag);
+      set_top_levels (dag);
+      set_precedence_levels(dag);
 
       if (XBT_LOG_ISENABLED(biCPA, xbt_log_priority_debug)){
         xbt_dynar_foreach(dag, cursor, task) {
