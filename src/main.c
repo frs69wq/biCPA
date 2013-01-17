@@ -14,8 +14,10 @@
 XBT_LOG_NEW_DEFAULT_CATEGORY(biCPA, "Logging specific to biCPA");
 
 char *platform_file = NULL, *dagfile = NULL;
-//have to move that into a commend line parameter
-int comm = 0;
+/* By default, there are no explicit communications between tasks. To have
+ * actual data transfers on the network, use the --with-communications flag
+ */
+int with_communications = 0;
 
 int main(int argc, char **argv) {
   int flag, total_nworkstations = 0;
@@ -35,6 +37,7 @@ int main(int argc, char **argv) {
     static struct option long_options[] = {
         {"platform", 1, 0, 'a'},
         {"dag", 1, 0, 'b'},
+        {"with-communications", 0, 0, 'c'},
         {0, 0, 0, 0}
     };
 
@@ -73,8 +76,7 @@ int main(int argc, char **argv) {
     case 'b':
       /* List of DAGs to schedule concurrently (just file names here) */
       dagfile = optarg;
-      //TODO manage to have a parallel task graph loader
-      dag = SD_dotload(dagfile);
+      dag = SD_PTG_dotload(dagfile);
       xbt_dynar_foreach(dag, cursor, task) {
         if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
           SD_task_watch(task, SD_DONE);
@@ -86,15 +88,19 @@ int main(int argc, char **argv) {
       set_top_level (dag);
       set_precedence_level(dag);
 
-      //TODO add test if (debug activated)
-      xbt_dynar_foreach(dag, cursor, task) {
-        if (SD_task_get_kind(task) != SD_TASK_COMM_PAR_MXN_1D_BLOCK)
-          XBT_DEBUG("%s: bl=%f, tl=%f, path=%f, pl=%d",
-              SD_task_get_name(task), SD_task_get_bottom_level(task),
-              SD_task_get_top_level(task),
-              SD_task_get_bottom_level(task) + SD_task_get_top_level(task),
-              SD_task_get_precedence_level(task));
+      if (XBT_LOG_ISENABLED(biCPA, xbt_log_priority_debug)){
+        xbt_dynar_foreach(dag, cursor, task) {
+          if (SD_task_get_kind(task) != SD_TASK_COMM_PAR_MXN_1D_BLOCK)
+            XBT_DEBUG("%s: bl=%f, tl=%f, path=%f, pl=%d",
+                SD_task_get_name(task), SD_task_get_bottom_level(task),
+                SD_task_get_top_level(task),
+                SD_task_get_bottom_level(task) + SD_task_get_top_level(task),
+                SD_task_get_precedence_level(task));
+        }
       }
+      break;
+    case 'c':
+      with_communications = 1;
       break;
     default:
       break;

@@ -306,7 +306,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
     makespan = SD_get_clock () - makespan;
 
     peak_alloc = getPeakAlloc();
-    if (comm){
+    if (with_communications){
       siList[j] = newSchedInfo(j, makespan, makespan * peak_alloc);
     } else {
       siList[j] = newSchedInfo(j, makespan, computeWork(dag));
@@ -371,7 +371,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   makespan = SD_get_clock () - makespan;
   peak_alloc = getPeakAlloc();
 
-  if (comm)
+  if (with_communications)
     total_work = makespan * peak_alloc;
   else
     total_work = computeWork (dag);
@@ -398,7 +398,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   makespan = SD_get_clock () - makespan;
   peak_alloc = getPeakAlloc();
 
-  if (comm)
+  if (with_communications)
     total_work = makespan * peak_alloc;
   else
     total_work = computeWork (dag);
@@ -425,7 +425,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   makespan = SD_get_clock () - makespan;
   peak_alloc = getPeakAlloc();
 
-  if (comm)
+  if (with_communications)
     total_work = makespan * peak_alloc;
   else
     total_work = computeWork (dag);
@@ -455,7 +455,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   makespan = SD_get_clock () - makespan;
   peak_alloc = getPeakAlloc();
 
-  if (comm)
+  if (with_communications)
     total_work = makespan * peak_alloc;
   else
     total_work = computeWork (dag);

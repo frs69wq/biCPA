@@ -11,7 +11,7 @@ void set_precedence_level (xbt_dynar_t dag);
 double computeWork (xbt_dynar_t dag);
 void resetSimulation (xbt_dynar_t dag);
 
-extern int comm;
+extern int with_communications;
 extern char* dagfile;
 
 char* basename (char*);
