@@ -93,7 +93,7 @@ void set_precedence_levels (xbt_dynar_t dag){
   }
 }
 
-double computeWork (xbt_dynar_t dag){
+double compute_total_work (xbt_dynar_t dag){
   unsigned int i;
   double total_work = 0.0;
   SD_task_t task;
@@ -106,8 +106,10 @@ double computeWork (xbt_dynar_t dag){
   return total_work;
 }
 
-void resetSimulation (xbt_dynar_t dag) {
-  resetWorkstationAttributes();
+void reset_simulation (xbt_dynar_t dag) {
+  //TODO check if not better to add another parameter to indicate which
+  //     simulated time value to use to reset some attributes
+  reset_workstation_attributes();
   SD_application_reinit();
   //TODO check how to reset task scheduling parameters
   set_bottom_levels(dag);

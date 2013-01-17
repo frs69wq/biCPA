@@ -8,8 +8,8 @@ void set_bottom_levels (xbt_dynar_t dag);
 void set_top_levels (xbt_dynar_t dag);
 void set_precedence_levels (xbt_dynar_t dag);
 
-double computeWork (xbt_dynar_t dag);
-void resetSimulation (xbt_dynar_t dag);
+double compute_total_work (xbt_dynar_t dag);
+void reset_simulation (xbt_dynar_t dag);
 
 extern int with_communications;
 extern char* dagfile;
