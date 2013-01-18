@@ -166,12 +166,11 @@ double top_level_recursive_computation(SD_task_t task){
             0.0; //TODO Replace by the estimation of the execution on the current allocation
             //SD_task_get_mean_cost(grand_parent);
       }
+      xbt_dynar_free_container(&grand_parents);
     }
 
     if (max_top_level < current_parent_top_level)
       max_top_level = current_parent_top_level;
-
-    xbt_dynar_free_container(&grand_parents);
   }
 
   my_top_level = max_top_level;
@@ -215,12 +214,11 @@ int precedence_level_recursive_computation(SD_task_t task){
         current_parent_prec_level =
             precedence_level_recursive_computation(grand_parent) + 1;
       }
+      xbt_dynar_free_container(&grand_parents);
     }
 
     if (my_prec_level < current_parent_prec_level)
       my_prec_level = current_parent_prec_level;
-
-    xbt_dynar_free_container(&grand_parents);
   }
 
   SD_task_set_precedence_level(task, my_prec_level);
