@@ -1,8 +1,6 @@
-#include "simdag/simdag.h"
-#include "xbt.h"
 #include "task.h"
 #include "workstation.h"
-#include "simdag/simdag.h"
+#include <stdlib.h>
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(task, biCPA, "Logging specific to tasks");
 

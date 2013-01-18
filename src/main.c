@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "simdag/simdag.h"
 #include "xbt.h"

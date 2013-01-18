@@ -1,6 +1,5 @@
 #ifndef TASK_H_
 #define TASK_H_
-
 #include "simdag/simdag.h"
 
 typedef struct _TaskAttribute *TaskAttribute;

@@ -4,7 +4,7 @@
 
 typedef struct _WorkstationAttribute *WorkstationAttribute;
 struct _WorkstationAttribute {
-  /* Earliest time at wich a workstation is ready to execute a task*/
+  /* Earliest time at which a workstation is ready to execute a task*/
   double available_at;
   SD_task_t last_scheduled_task;
 };
