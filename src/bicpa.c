@@ -8,7 +8,7 @@
 #include "timer.h"
 #include "workstation.h"
 
-XBT_LOG_NEW_DEFAULT_SUBCATEGORY(biCPA, biCPA, "Logging specific to biCPA");
+XBT_LOG_NEW_DEFAULT_SUBCATEGORY(heuristic, biCPA, "Logging specific to biCPA");
 
 typedef struct _SchedInfo *SchedInfo;
 
@@ -130,7 +130,6 @@ int getBiCriteriaTradeoff(int size, SchedInfo *list, double min_c,
 double initTA(xbt_dynar_t dag, int total_nhosts) {
   unsigned int i;
   int nb_comp_nodes = 0;
-  const SD_workstation_t *workstations = SD_workstation_get_list();
   double ta = 0.0;
   SD_task_t task;
 
@@ -138,9 +137,7 @@ double initTA(xbt_dynar_t dag, int total_nhosts) {
     if(SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       nb_comp_nodes++;
       SD_task_set_allocation_size(task,1);
-      //TODO have to build the array of computation
-      ta += SD_task_get_execution_time(task, 1, workstations,
-          SD_task_get_amount(task), 0.0);
+      ta += SD_task_estimate_execution_time(task, 1);
     }
   }
 
@@ -154,7 +151,6 @@ void setMultipleAllocations(xbt_dynar_t dag) {
   int current_nworkstations = 1;
   int iteration = 0;
   const int nworkstations = SD_workstation_get_number();
-  const SD_workstation_t *workstations = SD_workstation_get_list();
 
   xbt_dynar_t children, grand_children;
   SD_task_t task, child, current_child, selected_task, max_BL_child=NULL;
@@ -198,20 +194,17 @@ void setMultipleAllocations(xbt_dynar_t dag) {
                   SD_task_get_bottom_level(current_child))){
             max_BL_child = current_child;
           }
-          XBT_DEBUG("Child with biggest bottom level is %s",
-              SD_task_get_name(max_BL_child));
-
-          n = SD_task_get_allocation_size(max_BL_child);
-          XBT_DEBUG("Current allocation for %s is %d workstations",
-              SD_task_get_name(max_BL_child), n);
         }
+        XBT_DEBUG("Child with biggest bottom level is %s",
+            SD_task_get_name(max_BL_child));
+
+        n = SD_task_get_allocation_size(max_BL_child);
+        XBT_DEBUG("Current allocation for %s is %d workstations",
+            SD_task_get_name(max_BL_child), n);
+
         if (n < nworkstations){
-          //TODO Build the computation arrays
-          delta_tmp = SD_task_get_execution_time(max_BL_child, n,
-              workstations, SD_task_get_amount(max_BL_child), 0.0) / n -
-              SD_task_get_execution_time(max_BL_child, n +1,
-                  workstations, SD_task_get_amount(max_BL_child), 0.0) /
-                  (n+1);
+          delta_tmp = SD_task_estimate_execution_time(max_BL_child, n) / n -
+              SD_task_estimate_execution_time(max_BL_child, (n+1)) / (n+1);
         } else {
           delta_tmp = 0.0;
         }
@@ -224,16 +217,15 @@ void setMultipleAllocations(xbt_dynar_t dag) {
         task = max_BL_child;
       }
 
-      if (!selected_task) {	/* The cluster is saturated */
+      if (!selected_task) { /* The cluster is saturated */
         saturation = 1;
       } else {
         SD_task_set_allocation_size(selected_task,
             SD_task_get_allocation_size(selected_task)+1);
         /* Recompute TCP and TA */
-        //TODO re-implement the getArea function
-        TA = TA +((getArea(selected_task,
+        TA = TA +((SD_task_estimate_area(selected_task,
                           SD_task_get_allocation_size(selected_task)) -
-                  getArea(selected_task,
+                  SD_task_estimate_area(selected_task,
                           SD_task_get_allocation_size(selected_task) - 1)) /
                   current_nworkstations);
 
@@ -245,7 +237,6 @@ void setMultipleAllocations(xbt_dynar_t dag) {
 
     xbt_dynar_foreach(dag, i, task){
       if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-        //TODO implement this
         SD_task_set_iterative_nworkstations(task, current_nworkstations,
             SD_task_get_allocation_size(task));
       }
@@ -274,12 +265,6 @@ void bicpaSchedule(xbt_dynar_t dag) {
   int nno_dom=0;
   SchedInfo *siList, *no_dom_list=NULL;
 
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task)== SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_allocate_iterative_nworkstations(task, nworkstations);//TODO implement this
-    }
-  }
-
   siList = (SchedInfo*) calloc (nworkstations, sizeof(SchedInfo));
 
   alloc_time = getTime();
@@ -291,11 +276,11 @@ void bicpaSchedule(xbt_dynar_t dag) {
   mapping_time = getTime();
 
   for (j=1; j <= nworkstations; j++){
-    // TODO xbt_dynar_sort(dag,bottomLevelCompareTasks);
+    xbt_dynar_sort(dag, bottomLevelCompareTasks);
     xbt_dynar_foreach(dag, i, task){
       if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
         SD_task_set_allocation_size(task,
-            SD_task_get_iterative_nworkstations(task, j));//TODO implement this
+            SD_task_get_iterative_nworkstations(task, j));
         SD_task_schedulel(task, SD_task_get_allocation_size(task),
             SD_task_get_workstation_list(task));
         //TODO add resource dependencies
@@ -353,7 +338,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
       work_nhosts+1,
       bicriteria_nhosts+1);
 
-  // TODO xbt_dynar_sort(dag,bottomLevelCompareTasks);
+  xbt_dynar_sort(dag, bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       SD_task_set_allocation_size(task,
@@ -382,7 +367,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   reset_simulation (dag);
 
-  // TODO xbt_dynar_sort(dag,bottomLevelCompareTasks);
+  xbt_dynar_sort(dag, bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       SD_task_set_allocation_size(task,
@@ -409,7 +394,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   reset_simulation (dag);
 
-  // TODO xbt_dynar_sort(dag,bottomLevelCompareTasks);
+  xbt_dynar_sort(dag,bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       SD_task_set_allocation_size(task,
@@ -439,7 +424,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   bicriteria_nhosts= getBiCriteriaTradeoff(nno_dom, no_dom_list,
       cpa_makespan, cpa_work, 0); // then minimizes the sum
 
-  // TODO xbt_dynar_sort(dag,bottomLevelCompareTasks);
+  xbt_dynar_sort(dag,bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       SD_task_set_allocation_size(task,

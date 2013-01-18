@@ -3,20 +3,20 @@ CC = gcc
 LIBS := -lsimgrid -lm
 
 SOURCES = \
+src/bicpa.c \
 src/dag.c \
 src/main.c \
 src/task.c \
 src/timer.c \
 src/workstation.c
-#src/bicpa.c \
 
 OBJS = \
+src/bicpa.o \
 src/dag.o \
 src/main.o \
 src/task.o \
 src/timer.o \
 src/workstation.o
-#src/bicpa.o \
 
 all: biCPA
 
