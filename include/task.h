@@ -50,4 +50,6 @@ double bottom_level_recursive_computation(SD_task_t task);
 double top_level_recursive_computation(SD_task_t task);
 int precedence_level_recursive_computation(SD_task_t task);
 
+double SD_task_estimate_execution_time(SD_task_t task);
+
 #endif /* TASK_H_ */

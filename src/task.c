@@ -15,6 +15,7 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(task, biCPA, "Logging specific to tasks");
 void SD_task_allocate_attribute(SD_task_t task){
   TaskAttribute attr = calloc(1,sizeof(struct _TaskAttribute));
   attr->marked = 0;
+  attr->allocation_size = 1;
   SD_task_set_data(task, attr);
 }
 
@@ -84,6 +85,12 @@ void SD_task_unmark(SD_task_t task){
   SD_task_set_data(task, attr);
 }
 
+double SD_task_estimate_execution_time(SD_task_t task){
+  const SD_workstation_t *workstations = SD_workstation_get_list();
+  return ((SD_task_get_amount(task)/SD_task_get_allocation_size(task))/
+      SD_workstation_get_power(workstations[0]));
+}
+
 double bottom_level_recursive_computation(SD_task_t task){
   unsigned int i;
   double my_bottom_level = 0.0, max_bottom_level,
@@ -91,11 +98,12 @@ double bottom_level_recursive_computation(SD_task_t task){
   SD_task_t child, grand_child;
   xbt_dynar_t children, grand_children;
 
-  //TODO Replace by the estimation of the execution on the current allocation
-  my_bottom_level = 0.0; //SD_task_get_mean_cost(task);
+  my_bottom_level = SD_task_estimate_execution_time(task);
 
   max_bottom_level = -1.0;
   if (!strcmp(SD_task_get_name(task),"end")){
+    XBT_DEBUG("end's bottom level is 0.0");
+    SD_task_mark(task);
     SD_task_set_bottom_level(task, 0.0);
     return 0.0;
   }
@@ -117,6 +125,13 @@ double bottom_level_recursive_computation(SD_task_t task){
             bottom_level_recursive_computation(grand_child);
       }
       xbt_dynar_free_container(&grand_children);
+    } else {
+      if (SD_task_is_marked(child)){
+        current_child_bottom_level = SD_task_get_bottom_level(child);
+      } else {
+        current_child_bottom_level =
+            bottom_level_recursive_computation(child);
+      }
     }
 
     if (max_bottom_level < current_child_bottom_level)
@@ -142,6 +157,8 @@ double top_level_recursive_computation(SD_task_t task){
   max_top_level = -1.0;
 
   if (!strcmp(SD_task_get_name(task),"root")){
+    XBT_DEBUG("root's top level is 0.0");
+    SD_task_mark(task);
     SD_task_set_top_level(task, 0.0);
     return 0.0;
   }
@@ -158,15 +175,22 @@ double top_level_recursive_computation(SD_task_t task){
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
       if (SD_task_is_marked(grand_parent)){
         current_parent_top_level = SD_task_get_top_level(grand_parent) +
-            0.0; //TODO Replace by the estimation of the execution on the current allocation
-            //SD_task_get_mean_cost(grand_parent);
+            SD_task_estimate_execution_time(grand_parent);
       } else {
         current_parent_top_level =
             top_level_recursive_computation(grand_parent) +
-            0.0; //TODO Replace by the estimation of the execution on the current allocation
-            //SD_task_get_mean_cost(grand_parent);
+            SD_task_estimate_execution_time(grand_parent);
       }
       xbt_dynar_free_container(&grand_parents);
+    } else {
+      if (SD_task_is_marked(parent)){
+        current_parent_top_level = SD_task_get_top_level(parent) +
+            SD_task_estimate_execution_time(parent);
+      } else {
+        current_parent_top_level =
+            top_level_recursive_computation(parent) +
+            SD_task_estimate_execution_time(parent);
+      }
     }
 
     if (max_top_level < current_parent_top_level)
@@ -193,6 +217,8 @@ int precedence_level_recursive_computation(SD_task_t task){
 
 
   if (!strcmp(SD_task_get_name(task),"root")){
+    XBT_DEBUG("root's precedence level is 0.0");
+    SD_task_mark(task);
     SD_task_set_precedence_level(task, 0);
     return 0;
   }
@@ -215,6 +241,14 @@ int precedence_level_recursive_computation(SD_task_t task){
             precedence_level_recursive_computation(grand_parent) + 1;
       }
       xbt_dynar_free_container(&grand_parents);
+    } else {
+      if (SD_task_is_marked(parent)){
+        current_parent_prec_level =
+            SD_task_get_precedence_level(parent) + 1;
+      } else {
+        current_parent_prec_level =
+            precedence_level_recursive_computation(parent) + 1;
+      }
     }
 
     if (my_prec_level < current_parent_prec_level)
