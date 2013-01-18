@@ -83,9 +83,9 @@ void SD_task_unmark(SD_task_t task){
   SD_task_set_data(task, attr);
 }
 
-double SD_task_estimate_execution_time(SD_task_t task){
+double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
   const SD_workstation_t *workstations = SD_workstation_get_list();
-  return ((SD_task_get_amount(task)/SD_task_get_allocation_size(task))/
+  return ((SD_task_get_amount(task)/nworkstations)/
       SD_workstation_get_power(workstations[0]));
 }
 
@@ -96,7 +96,8 @@ double bottom_level_recursive_computation(SD_task_t task){
   SD_task_t child, grand_child;
   xbt_dynar_t children, grand_children;
 
-  my_bottom_level = SD_task_estimate_execution_time(task);
+  my_bottom_level = SD_task_estimate_execution_time(task,
+      SD_task_get_allocation_size(task));
 
   max_bottom_level = -1.0;
   if (!strcmp(SD_task_get_name(task),"end")){
@@ -173,21 +174,25 @@ double top_level_recursive_computation(SD_task_t task){
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
       if (SD_task_is_marked(grand_parent)){
         current_parent_top_level = SD_task_get_top_level(grand_parent) +
-            SD_task_estimate_execution_time(grand_parent);
+            SD_task_estimate_execution_time(grand_parent,
+                SD_task_get_allocation_size(grand_parent));
       } else {
         current_parent_top_level =
             top_level_recursive_computation(grand_parent) +
-            SD_task_estimate_execution_time(grand_parent);
+            SD_task_estimate_execution_time(grand_parent,
+                SD_task_get_allocation_size(grand_parent));
       }
       xbt_dynar_free_container(&grand_parents);
     } else {
       if (SD_task_is_marked(parent)){
         current_parent_top_level = SD_task_get_top_level(parent) +
-            SD_task_estimate_execution_time(parent);
+            SD_task_estimate_execution_time(parent,
+                SD_task_get_allocation_size(parent));
       } else {
         current_parent_top_level =
             top_level_recursive_computation(parent) +
-            SD_task_estimate_execution_time(parent);
+            SD_task_estimate_execution_time(parent,
+                SD_task_get_allocation_size(parent));
       }
     }
 
