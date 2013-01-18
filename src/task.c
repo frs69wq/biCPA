@@ -11,14 +11,17 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(task, biCPA, "Logging specific to tasks");
 /*****************************************************************************/
 
 void SD_task_allocate_attribute(SD_task_t task){
+  const int nworkstations = SD_workstation_get_number();
   TaskAttribute attr = calloc(1,sizeof(struct _TaskAttribute));
   attr->marked = 0;
   attr->allocation_size = 1;
+  attr->iterative_nworkstations = (int*) calloc (nworkstations, sizeof(int));
   SD_task_set_data(task, attr);
 }
 
 void SD_task_free_attribute(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  free(attr->iterative_nworkstations);
   free(attr);
   SD_task_set_data(task, NULL);
 }
@@ -63,6 +66,17 @@ int SD_task_get_allocation_size(SD_task_t task){
 void SD_task_set_allocation_size(SD_task_t task, int nworkstations){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   attr->allocation_size = nworkstations;
+  SD_task_set_data(task, attr);
+}
+
+int SD_task_get_iterative_nworkstations (SD_task_t task, int index){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  return attr->iterative_nworkstations[index-1];
+}
+
+void SD_task_set_iterative_nworkstations (SD_task_t task, int index, int size){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  attr->iterative_nworkstations[index-1] = size;
   SD_task_set_data(task, attr);
 }
 
