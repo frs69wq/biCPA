@@ -23,6 +23,10 @@ struct _TaskAttribute {
  */
 void SD_task_allocate_attribute(SD_task_t);
 void SD_task_free_attribute(SD_task_t);
+/*
+ * Comparators
+ */
+int bottomLevelCompareTasks(const void *, const void *);
 
 /*
  * Accessors

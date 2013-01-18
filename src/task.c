@@ -66,6 +66,29 @@ void SD_task_set_allocation_size(SD_task_t task, int nworkstations){
   SD_task_set_data(task, attr);
 }
 
+/*****************************************************************************/
+/*****************************************************************************/
+/**************               Comparison functions              **************/
+/*****************************************************************************/
+/*****************************************************************************/
+
+/* Bottom level comparison function (decreasing) used by qsort */
+int bottomLevelCompareTasks(const void *n1, const void *n2)
+{
+  double bottom_level1, bottom_level2;
+
+  bottom_level1 = SD_task_get_bottom_level((*((SD_task_t *)n1)));
+  bottom_level2 = SD_task_get_bottom_level((*((SD_task_t *)n2)));
+
+  if (bottom_level1 > bottom_level2)
+    return -1;
+  else if (bottom_level1 == bottom_level2)
+    return 0;
+  else
+    return 1;
+}
+
+
 int SD_task_is_marked(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   return attr->marked;
