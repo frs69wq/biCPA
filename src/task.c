@@ -112,6 +112,10 @@ double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
       SD_workstation_get_power(workstations[0]));
 }
 
+double SD_task_estimate_area(SD_task_t task, int nworkstations) {
+  return SD_task_estimate_execution_time(task, nworkstations) * nworkstations;
+}
+
 double bottom_level_recursive_computation(SD_task_t task){
   unsigned int i;
   double my_bottom_level = 0.0, max_bottom_level,
