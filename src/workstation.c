@@ -83,6 +83,37 @@ int nameCompareWorkstations(const void *w1, const void *w2){
       SD_workstation_get_name(*((SD_workstation_t *)w2)));
 }
 
+/* Available date comparison (decreasing) */
+int availableAtCompareWorkstations(const void *n1, const void *n2)
+{
+  double avail1, avail2;
+
+  avail1 = SD_workstation_get_available_at(*((SD_workstation_t*)n1));
+  avail2 = SD_workstation_get_available_at(*((SD_workstation_t*)n2));
+
+  if (avail1 > avail2)
+    return -1;
+  else if (avail1 == avail2)
+    return 0;
+  else
+    return 1;
+}
+
+/* Available date comparison (increasing) */
+int NavailableAtCompareWorkstations(const void *n1, const void *n2) {
+  double avail1, avail2;
+
+  avail1 = SD_workstation_get_available_at(*((SD_workstation_t*)n1));
+  avail2 = SD_workstation_get_available_at(*((SD_workstation_t*)n2));
+
+  if (avail1 < avail2)
+    return -1;
+  else if (avail1 == avail2)
+    return 0;
+  else
+    return 1;
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /**************               Accounting functions              **************/
@@ -109,3 +140,33 @@ int compute_peak_resource_usage() {
   return peak;
 }
 
+SD_workstation_t * get_best_workstation_set(double time){
+  int i, nfirst=0;
+  int nworkstations = SD_workstation_get_number();
+  const SD_workstation_t *workstations = SD_workstation_get_list();
+  SD_workstation_t *best_workstation_set = NULL;
+
+  best_workstation_set = (SD_workstation_t*) calloc (nworkstations,
+      sizeof(SD_workstation_t));
+
+  for (i = 0; i < nworkstations; i++){
+    if (SD_workstation_get_available_at(workstations[i]) > time){
+      best_workstation_set[nworkstations-nfirst-1] = workstations[i];
+      nfirst++;
+    } else {
+      best_workstation_set[i - nfirst] = workstations[i];
+    }
+  }
+
+  /* Order hosts that are available before the end of node's parent
+   * in a decreasing order w.r.t. their availability date*/
+  qsort(best_workstation_set,nworkstations-nfirst,sizeof(SD_workstation_t),
+      availableAtCompareWorkstations);
+
+  /* Order hosts that are available after the end of node's parent
+   * in a increasing order w.r.t. their availability date */
+  qsort(&(best_workstation_set[nworkstations-nfirst]), nfirst,
+      sizeof(SD_workstation_t), NavailableAtCompareWorkstations);
+
+  return best_workstation_set;
+}

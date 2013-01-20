@@ -28,8 +28,11 @@ void SD_workstation_set_last_scheduled_task(SD_workstation_t workstation,
  * Comparators
  */
 int nameCompareWorkstations(const void *, const void *);
+int availableAtCompareWorkstations(const void *n1, const void *n2);
+int NavailableAtCompareWorkstations(const void *n1, const void *n2);
 
 int compute_peak_resource_usage();
+SD_workstation_t * get_best_workstation_set(double time);
 void reset_workstation_attributes();
 
 extern char* platform_file;
