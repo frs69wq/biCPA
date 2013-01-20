@@ -13,7 +13,7 @@ struct _TaskAttribute {
   SD_workstation_t *allocation;
 
   //TODO have to be properly allocated and freed
-  int *iterative_nworkstations;
+  int *iterative_allocations;
 
   int marked;
 };
@@ -43,8 +43,8 @@ void SD_task_set_precedence_level(SD_task_t task, int precedence_level);
 int SD_task_get_allocation_size(SD_task_t task);
 void SD_task_set_allocation_size(SD_task_t task, int nworkstations);
 
-int SD_task_get_iterative_nworkstations (SD_task_t task, int index);
-void SD_task_set_iterative_nworkstations (SD_task_t task, int index, int size);
+int SD_task_get_iterative_allocations (SD_task_t task, int index);
+void SD_task_set_iterative_allocations (SD_task_t task, int index, int size);
 
 /*
  * Marking nodes
