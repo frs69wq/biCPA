@@ -108,6 +108,33 @@ void set_allocations_from_iteration(xbt_dynar_t dag, int index){
   }
 }
 
+void map_allocations(xbt_dynar_t dag){
+  unsigned int i;
+  double min_start_time;
+  SD_workstation_t * sorted_workstation_list = NULL;
+  SD_task_t task, root = get_dag_root(dag);
+
+  /* Schedule Root */
+  if (SD_task_get_state(root) == SD_NOT_SCHEDULED) {
+    XBT_DEBUG("Scheduling '%s'", SD_task_get_name(root));
+    SD_task_schedulel(root, 1, SD_workstation_get_list());
+  }
+
+  xbt_dynar_sort(dag, bottomLevelCompareTasks);
+
+  xbt_dynar_foreach(dag, i, task){
+    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
+
+      min_start_time = SD_task_estimate_minimal_start_time(task);
+      XBT_DEBUG("Task '%s' cannot start before time = %f",
+          SD_task_get_name(task), min_start_time);
+
+      sorted_workstation_list = get_best_workstation_set(min_start_time);
+      SD_task_set_allocation(task, sorted_workstation_list);
+    }
+  }
+}
+
 double compute_total_work (xbt_dynar_t dag){
   unsigned int i;
   double total_work = 0.0;
