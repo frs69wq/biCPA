@@ -8,6 +8,7 @@ struct _TaskAttribute {
   double top_level;
   int precedence_level;
 
+  double estimated_finish_time;
   /* The workstations onto which the node has been scheduled */
   int allocation_size;
   SD_workstation_t *allocation;
@@ -45,6 +46,9 @@ void SD_task_set_allocation_size(SD_task_t task, int nworkstations);
 
 int SD_task_get_iterative_allocations (SD_task_t task, int index);
 void SD_task_set_iterative_allocations (SD_task_t task, int index, int size);
+
+double SD_task_get_estimated_finish_time(SD_task_t task);
+void SD_task_set_estimated_finish_time(SD_task_t task, double finish_time);
 
 /*
  * Marking nodes

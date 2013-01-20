@@ -80,6 +80,17 @@ void SD_task_set_iterative_allocations (SD_task_t task, int index, int size){
   SD_task_set_data(task, attr);
 }
 
+double SD_task_get_estimated_finish_time(SD_task_t task){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  return attr->estimated_finish_time;
+}
+
+void SD_task_set_estimated_finish_time(SD_task_t task, double finish_time){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  attr->estimated_finish_time = finish_time;
+  SD_task_set_data(task, attr);
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /**************               Comparison functions              **************/
@@ -132,6 +143,28 @@ double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
   XBT_DEBUG("Estimation for task %s is: %f seconds",
       SD_task_get_name(task), estimate);
   return estimate;
+}
+
+double SD_task_estimate_minimal_start_time(SD_task_t task){
+  unsigned int i;
+  double min_start_time=0.0;
+  xbt_dynar_t parents, grand_parents;
+  SD_task_t parent, grand_parent;
+
+  parents = SD_task_get_parents(task);
+  xbt_dynar_foreach(parents, i, parent){
+    if (SD_task_get_kind(parent) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
+      grand_parents = SD_task_get_parents(parent);
+      xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
+        if (SD_task_get_estimated_finish_time(grand_parent) > min_start_time)
+          min_start_time = SD_task_get_estimated_finish_time(grand_parent);
+    }
+    else{
+      if (SD_task_get_estimated_finish_time(parent) > min_start_time)
+        min_start_time = SD_task_get_estimated_finish_time(parent);
+    }
+  }
+  return min_start_time;
 }
 
 double SD_task_estimate_area(SD_task_t task, int nworkstations) {
