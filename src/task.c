@@ -122,8 +122,16 @@ void SD_task_unmark(SD_task_t task){
 
 double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
   const SD_workstation_t *workstations = SD_workstation_get_list();
-  return ((SD_task_get_amount(task)/nworkstations)/
-      SD_workstation_get_power(workstations[0]));
+  double amount, alpha, power, estimate;
+
+  amount = SD_task_get_amount(task);
+  alpha = SD_task_get_alpha(task);
+  power = SD_workstation_get_power(workstations[0]);
+  estimate = (alpha + (1 - alpha)/nworkstations) * (amount/power);
+
+  XBT_DEBUG("Estimation for task %s is: %f seconds",
+      SD_task_get_name(task), estimate);
+  return estimate;
 }
 
 double SD_task_estimate_area(SD_task_t task, int nworkstations) {
