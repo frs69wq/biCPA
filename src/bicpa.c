@@ -42,8 +42,7 @@ int ImakespanCompareSchedInfo(const void *n1, const void *n2) {
     return 1;
 }
 
-int IworkCompareSchedInfo(const void *n1, const void *n2)
-{
+int IworkCompareSchedInfo(const void *n1, const void *n2) {
   double e1, e2;
 
   e1 = (*((SchedInfo *)n1))->work;
@@ -176,7 +175,7 @@ void setMultipleAllocations(xbt_dynar_t dag) {
       delta = -1.0;
       task = get_dag_root(dag);
 
-      while (!(strcmp(SD_task_get_name(task), "end"))) {
+      while ((strcmp(SD_task_get_name(task), "end"))) {
         children = SD_task_get_children(task);
         xbt_dynar_foreach(children, i, child){
           if (SD_task_get_kind(child) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
@@ -241,12 +240,8 @@ void setMultipleAllocations(xbt_dynar_t dag) {
             SD_task_get_allocation_size(task));
       }
     }
-    XBT_DEBUG("current = %d,  TA' = %.2f, TCP = %.2f",
-        current_nworkstations, TA, TCP);
-
-    current_nworkstations++;
-
     TA*=current_nworkstations;
+    current_nworkstations++;
   }
 }
 
@@ -273,9 +268,21 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   alloc_time = getTime() - alloc_time;
 
+  xbt_dynar_foreach(dag, i, task){
+    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
+      XBT_VERB("Intermediate allocations of task '%s' are:",
+          SD_task_get_name(task));
+      for(j = 1; j < nworkstations; j++){
+        XBT_VERB("  - %d : %d", j,
+            SD_task_get_iterative_nworkstations(task, j));
+      }
+    }
+  }
+  XBT_VERB("Allocations built in %f seconds", alloc_time);
+
   mapping_time = getTime();
 
-  for (j=1; j <= nworkstations; j++){
+  for (j = 1; j <= nworkstations; j++){
     xbt_dynar_sort(dag, bottomLevelCompareTasks);
     xbt_dynar_foreach(dag, i, task){
       if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
@@ -302,6 +309,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
         siList[j]->work, peak_alloc);
     reset_simulation (dag);
   }
+  exit(0);
 
   cpa_makespan = siList[nworkstations-1]->makespan;
   cpa_work = siList[nworkstations-1]->work;

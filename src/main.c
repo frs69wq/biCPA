@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
     }
   }
 
-//  bicpaSchedule(dag);
+  bicpaSchedule(dag);
 
   xbt_dynar_foreach(dag, cursor, task) {
     SD_task_free_attribute(task);
