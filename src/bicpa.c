@@ -236,7 +236,7 @@ void setMultipleAllocations(xbt_dynar_t dag) {
 
     xbt_dynar_foreach(dag, i, task){
       if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-        SD_task_set_iterative_nworkstations(task, current_nworkstations,
+        SD_task_set_iterative_allocations(task, current_nworkstations,
             SD_task_get_allocation_size(task));
       }
     }
@@ -274,7 +274,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
           SD_task_get_name(task));
       for(j = 1; j < nworkstations; j++){
         XBT_VERB("  - %d : %d", j,
-            SD_task_get_iterative_nworkstations(task, j));
+            SD_task_get_iterative_allocations(task, j));
       }
     }
   }
@@ -283,16 +283,14 @@ void bicpaSchedule(xbt_dynar_t dag) {
   mapping_time = getTime();
 
   for (j = 1; j <= nworkstations; j++){
+    set_allocations_from_iteration(dag, j);
     xbt_dynar_sort(dag, bottomLevelCompareTasks);
-    xbt_dynar_foreach(dag, i, task){
-      if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-        SD_task_set_allocation_size(task,
-            SD_task_get_iterative_nworkstations(task, j));
-        SD_task_schedulel(task, SD_task_get_allocation_size(task),
-            SD_task_get_workstation_list(task));
+//    SD_task_schedulel(task, SD_task_get_allocation_size(task),
+//            SD_task_get_workstation_list(task));
         //TODO add resource dependencies
-      }
-    }
+//      }
+    exit(0);
+
     makespan = SD_get_clock ();
     SD_simulate(-1.);
     makespan = SD_get_clock () - makespan;
@@ -309,7 +307,6 @@ void bicpaSchedule(xbt_dynar_t dag) {
         siList[j]->work, peak_alloc);
     reset_simulation (dag);
   }
-  exit(0);
 
   cpa_makespan = siList[nworkstations-1]->makespan;
   cpa_work = siList[nworkstations-1]->work;
@@ -346,11 +343,10 @@ void bicpaSchedule(xbt_dynar_t dag) {
       work_nhosts+1,
       bicriteria_nhosts+1);
 
+  set_allocations_from_iteration(dag, bicriteria_nhosts);
   xbt_dynar_sort(dag, bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_set_allocation_size(task,
-          SD_task_get_iterative_nworkstations(task, bicriteria_nhosts));
       SD_task_schedulel(task, SD_task_get_allocation_size(task),
           SD_task_get_workstation_list(task));
       //TODO add resource dependencies
@@ -375,11 +371,10 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   reset_simulation (dag);
 
+  set_allocations_from_iteration(dag, makespan_nhosts);
   xbt_dynar_sort(dag, bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_set_allocation_size(task,
-          SD_task_get_iterative_nworkstations(task, makespan_nhosts));
       SD_task_schedulel(task, SD_task_get_allocation_size(task),
           SD_task_get_workstation_list(task));
       //TODO add resource dependencies
@@ -402,11 +397,10 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   reset_simulation (dag);
 
+  set_allocations_from_iteration(dag, work_nhosts);
   xbt_dynar_sort(dag,bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_set_allocation_size(task,
-          SD_task_get_iterative_nworkstations(task, work_nhosts));
       SD_task_schedulel(task, SD_task_get_allocation_size(task),
           SD_task_get_workstation_list(task));
       //TODO add resource dependencies
@@ -432,11 +426,10 @@ void bicpaSchedule(xbt_dynar_t dag) {
   bicriteria_nhosts= getBiCriteriaTradeoff(nno_dom, no_dom_list,
       cpa_makespan, cpa_work, 0); // then minimizes the sum
 
+  set_allocations_from_iteration(dag, bicriteria_nhosts);
   xbt_dynar_sort(dag,bottomLevelCompareTasks);
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_set_allocation_size(task,
-          SD_task_get_iterative_nworkstations(task, work_nhosts));
       SD_task_schedulel(task, SD_task_get_allocation_size(task),
           SD_task_get_workstation_list(task));
       //TODO add resource dependencies

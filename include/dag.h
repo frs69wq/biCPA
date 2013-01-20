@@ -8,6 +8,7 @@ void set_bottom_levels (xbt_dynar_t dag);
 void set_top_levels (xbt_dynar_t dag);
 void set_precedence_levels (xbt_dynar_t dag);
 
+void set_allocations_from_iteration(xbt_dynar_t dag, int index);
 double compute_total_work (xbt_dynar_t dag);
 void reset_simulation (xbt_dynar_t dag);
 

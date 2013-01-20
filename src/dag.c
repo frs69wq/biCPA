@@ -3,6 +3,7 @@
 #include "task.h"
 #include "workstation.h"
 
+XBT_LOG_NEW_DEFAULT_SUBCATEGORY(dag, biCPA, "Logging specific to dag");
 
 /*
  * Get the dummy 'root' task of a DAG, i.e., the first task of the dynar.
@@ -90,6 +91,20 @@ void set_precedence_levels (xbt_dynar_t dag){
   /* Tasks were marked during the DFS, unmark them all */
   xbt_dynar_foreach(dag, i, task){
     SD_task_unmark(task);
+  }
+}
+
+void set_allocations_from_iteration(xbt_dynar_t dag, int index){
+  unsigned int i;
+  SD_task_t task;
+  xbt_dynar_foreach(dag, i, task){
+    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
+      SD_task_set_allocation_size(task,
+          SD_task_get_iterative_allocations(task, index));
+      XBT_DEBUG("Allocation of task '%s' is set to %d (check = %d)",
+          SD_task_get_name(task), SD_task_get_allocation_size(task),
+          SD_task_get_iterative_allocations(task, index));
+    }
   }
 }
 
