@@ -69,7 +69,7 @@ void SD_task_set_allocation_size(SD_task_t task, int nworkstations){
   SD_task_set_data(task, attr);
 }
 
-int SD_task_get_iterative_nworkstations (SD_task_t task, int index){
+int SD_task_get_iterative_allocations (SD_task_t task, int index){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   return attr->iterative_allocations[index-1];
 }
