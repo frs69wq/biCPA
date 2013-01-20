@@ -63,11 +63,32 @@ int SD_task_get_allocation_size(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   return attr->allocation_size;
 }
+
 void SD_task_set_allocation_size(SD_task_t task, int nworkstations){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   attr->allocation_size = nworkstations;
   SD_task_set_data(task, attr);
 }
+
+SD_workstation_t *SD_task_get_allocation(SD_task_t task){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  return attr->allocation;
+}
+
+void SD_task_set_allocation(SD_task_t task,
+    SD_workstation_t *workstation_list){
+  int i;
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  if (attr->allocation)
+    free(attr->allocation);
+  attr->allocation = (SD_workstation_t*) calloc (attr->allocation_size,
+      sizeof(SD_workstation_t));
+  for (i = 0; i < attr->allocation_size; i++){
+    attr->allocation[i] = workstation_list[i];
+  }
+  SD_task_set_data(task, attr);
+}
+
 
 int SD_task_get_iterative_allocations (SD_task_t task, int index){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);

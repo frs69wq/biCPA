@@ -44,6 +44,9 @@ void SD_task_set_precedence_level(SD_task_t task, int precedence_level);
 int SD_task_get_allocation_size(SD_task_t task);
 void SD_task_set_allocation_size(SD_task_t task, int nworkstations);
 
+SD_workstation_t *SD_task_get_allocation(SD_task_t task);
+void SD_task_set_allocation(SD_task_t task, SD_workstation_t *workstation_list);
+
 int SD_task_get_iterative_allocations (SD_task_t task, int index);
 void SD_task_set_iterative_allocations (SD_task_t task, int index, int size);
 
@@ -63,5 +66,6 @@ int precedence_level_recursive_computation(SD_task_t task);
 
 double SD_task_estimate_execution_time(SD_task_t task, int nworkstations);
 double SD_task_estimate_area(SD_task_t task, int nworkstations);
+double SD_task_estimate_minimal_start_time(SD_task_t task);
 
 #endif /* TASK_H_ */
