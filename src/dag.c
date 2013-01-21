@@ -109,15 +109,17 @@ void set_allocations_from_iteration(xbt_dynar_t dag, int index){
 }
 
 void map_allocations(xbt_dynar_t dag){
-  unsigned int i;
-  double min_start_time;
-  SD_workstation_t * sorted_workstation_list = NULL;
+  unsigned int i, j;
+  int allocation_size;
+  double min_start_time,last_data_arrival, earliest_availability;
+  SD_workstation_t * allocation = NULL;
   SD_task_t task, root = get_dag_root(dag);
 
   /* Schedule Root */
   if (SD_task_get_state(root) == SD_NOT_SCHEDULED) {
     XBT_DEBUG("Scheduling '%s'", SD_task_get_name(root));
     SD_task_schedulel(root, 1, SD_workstation_get_list());
+    SD_task_set_estimated_finish_time(root, 0.0);
   }
 
   xbt_dynar_sort(dag, bottomLevelCompareTasks);
@@ -129,12 +131,49 @@ void map_allocations(xbt_dynar_t dag){
       XBT_DEBUG("Task '%s' cannot start before time = %f",
           SD_task_get_name(task), min_start_time);
 
-      sorted_workstation_list = get_best_workstation_set(min_start_time);
-      SD_task_set_allocation(task, sorted_workstation_list);
+      allocation = get_best_workstation_set(min_start_time);
+      allocation_size =  SD_task_get_allocation_size(task);
+      SD_task_set_allocation(task, allocation);
+
+      SD_task_schedulev(task, allocation_size, allocation);
+
+      last_data_arrival = SD_task_estimate_last_data_arrival_time(task);
+      earliest_availability =
+          get_best_workstation_set_earliest_availability(allocation_size,
+          allocation),
+      SD_task_set_estimated_finish_time(task,
+          MAX(last_data_arrival, earliest_availability)
+          + SD_task_estimate_execution_time(task, allocation_size));
+
+      XBT_VERB("Just scheduled task '%s' on %d workstation (first is '%s')",
+          SD_task_get_name(task), allocation_size,
+          SD_workstation_get_name(allocation[0]));
+      XBT_VERB("   Estimated [Start-Finish] time interval = [%.3f - %.3f]",
+          SD_task_get_estimated_finish_time(task)-
+          SD_task_estimate_execution_time(task, allocation_size),
+          SD_task_get_estimated_finish_time(task));
+      for (j=0; j < allocation_size; j++){
+        SD_workstation_set_available_at(allocation[j],
+            SD_task_get_estimated_finish_time(task));
+
+        /* Create resource dependencies if needed */
+        if (SD_workstation_get_last_scheduled_task(allocation[j]) &&
+            !SD_task_dependency_exists(
+                SD_workstation_get_last_scheduled_task(allocation[j]),task))
+          SD_task_dependency_add("resource", NULL,
+              SD_workstation_get_last_scheduled_task(allocation[j]), task);
+
+        SD_workstation_set_last_scheduled_task(allocation[j], task);
+      }
     }
   }
 }
 
+/*****************************************************************************/
+/*****************************************************************************/
+/**************               Accounting functions              **************/
+/*****************************************************************************/
+/*****************************************************************************/
 double compute_total_work (xbt_dynar_t dag){
   unsigned int i;
   double total_work = 0.0;
@@ -142,7 +181,8 @@ double compute_total_work (xbt_dynar_t dag){
 
   xbt_dynar_foreach(dag, i, task){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      total_work += 0; //TODO getArea(task, SD_task_get_nworkstations(task));
+      total_work += SD_task_estimate_area(task,
+          SD_task_get_allocation_size(task));
     }
   }
   return total_work;
