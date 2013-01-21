@@ -268,11 +268,14 @@ double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
   }
 
   if (i == src_allocation_size) {
-    /* both configurations are identical so transfer_time = 0 */
-    return 0.0;
+    /* both configurations are identical. Let just consider the transfer between
+     * the first workstation of each set */
+    route= SD_route_get_list (src_allocation[0], dst_allocation[0]);
+    route_size = SD_route_get_size(src_allocation[0], dst_allocation[0]);
+    src_index=dst_index=0;
   } else {
     /* Found 2 different hosts. The first host belongs to src
-       and the second one belongs to dest. Then
+       and the second one belongs to dst. Then
        compute the transfer time walking through the route between
        them */
     for (s = 0; s < src_allocation_size; s++) {
@@ -291,31 +294,35 @@ double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
         dst_allocation[dst_index]);
     route_size = SD_route_get_size(src_allocation[src_index],
         dst_allocation[dst_index]);
-
-    /* first link */
-    transfer_time = size/
-        (SD_link_get_current_bandwidth(route[0])*src_allocation_size);
-    for (i = 1; i < route_size - 1; i++) {
-      if (transfer_time < (size /
-          SD_link_get_current_bandwidth(route[i])))
-        transfer_time = size / SD_link_get_current_bandwidth(route[i]);
-    }
-
-    /* last link */
-    if (transfer_time < size /
-        (SD_link_get_current_bandwidth(route[route_size-1]) *
-            dst_allocation_size)){
-      transfer_time = size /
-          (SD_link_get_current_bandwidth(route[route_size-1]) *
-              dst_allocation_size);
-    }
-
-    transfer_time +=
-        SD_route_get_current_latency (src_allocation[src_index],
-            dst_allocation[dst_index]);
-    return transfer_time;
   }
+
+ /* first link */
+  transfer_time = size/
+      (SD_link_get_current_bandwidth(route[0])*src_allocation_size);
+
+  for (i = 1; i < route_size - 1; i++) {
+    if (transfer_time < (size /
+        SD_link_get_current_bandwidth(route[i])))
+      transfer_time = size / SD_link_get_current_bandwidth(route[i]);
+  }
+
+  /* last link */
+  if (transfer_time < size /
+      (SD_link_get_current_bandwidth(route[route_size-1]) *
+          dst_allocation_size)){
+    transfer_time = size /
+        (SD_link_get_current_bandwidth(route[route_size-1]) *
+            dst_allocation_size);
+  }
+
+  transfer_time +=
+      SD_route_get_current_latency (src_allocation[src_index],
+          dst_allocation[dst_index]);
+  XBT_VERB("Estimated transfer time between tasks '%s' and '%s': %.3f",
+      SD_task_get_name(src), SD_task_get_name(dst),transfer_time);
+  return transfer_time;
 }
+
 
 double SD_task_estimate_last_data_arrival_time (SD_task_t task){
   unsigned int i;
