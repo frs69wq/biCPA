@@ -180,3 +180,13 @@ SD_workstation_t * get_best_workstation_set(double time){
 
   return best_workstation_set;
 }
+
+double get_best_workstation_set_earliest_availability(int nworkstations,
+    SD_workstation_t * workstations){
+  int i;
+  double max_availability = SD_workstation_get_available_at(workstations[0]);
+  for (i = 1; i < nworkstations; i++)
+    if (SD_workstation_get_available_at(workstations[i]) > max_availability)
+      max_availability = SD_workstation_get_available_at(workstations[i]);
+  return max_availability;
+}

@@ -44,6 +44,8 @@ int compute_peak_resource_usage();
 
 
 SD_workstation_t * get_best_workstation_set(double time);
+double get_best_workstation_set_earliest_availability(int nworkstations,
+    SD_workstation_t * workstations);
 
 extern char* platform_file;
 
