@@ -149,7 +149,17 @@ int compute_peak_resource_usage() {
 
   return peak;
 }
-
+/*
+ * Sort the global list workstations with regard to their availability dates and
+ * the simulated time given as input (that corresponds to the estimated minimal
+ * start time of a task).
+ * All the workstations that are available before this minimal start are sorted
+ * in decreasing order of available_at values and placed at the beginning of the
+ * set. Those that are available after are sorted in increasing order of
+ * available_at values and placed at the end of the set. This way idle times are
+ * minimize, and the earliest available workstations are selected, whether the
+ * task has to wait or not.
+ */
 SD_workstation_t * get_best_workstation_set(double time){
   int i, nfirst=0;
   int nworkstations = SD_workstation_get_number();
@@ -181,6 +191,11 @@ SD_workstation_t * get_best_workstation_set(double time){
   return best_workstation_set;
 }
 
+/*
+ * Determine when all the members of the workstation set given as input are
+ * actually available. This corresponds to return the maximum of the different
+ * available_at attribute values.
+ */
 double get_best_workstation_set_earliest_availability(int nworkstations,
     SD_workstation_t * workstations){
   int i;
