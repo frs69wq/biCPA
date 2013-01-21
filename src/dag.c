@@ -189,11 +189,36 @@ double compute_total_work (xbt_dynar_t dag){
 }
 
 void reset_simulation (xbt_dynar_t dag) {
+  unsigned int i,j;
+  SD_task_t task, parent;
+  xbt_dynar_t parents;
+
+  /*
+   * Let's remove the resource dependencies that have been added by the
+   * previous simulation round.
+   */
+  xbt_dynar_foreach(dag, i, task){
+    parents = SD_task_get_parents(task);
+    xbt_dynar_foreach(parents, j, parent){
+      if (SD_task_get_kind(parent) == SD_TASK_COMP_PAR_AMDAHL){
+        if (SD_task_dependency_exists(parent, task) &&
+            (SD_task_dependency_get_name(parent,task)) &&
+            (!strcmp(SD_task_dependency_get_name(parent,task), "resource"))){
+          XBT_INFO("Remove resource dependency between tasks '%s' and '%s'",
+              SD_task_get_name(parent), SD_task_get_name(task));
+          SD_task_dependency_remove(parent, task);
+        }
+      }
+    }
+  }
   //TODO check if not better to add another parameter to indicate which
   //     simulated time value to use to reset some attributes
   reset_workstation_attributes();
-  SD_application_reinit();
   //TODO check how to reset task scheduling parameters
+  xbt_dynar_foreach(dag, i, task){
+    SD_task_dump(task);
+  }
+  SD_application_reinit();
   set_bottom_levels(dag);
   set_top_levels(dag);
   set_precedence_levels(dag);
