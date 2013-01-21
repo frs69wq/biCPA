@@ -21,6 +21,7 @@ void SD_task_allocate_attribute(SD_task_t task){
 
 void SD_task_free_attribute(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  free(attr->allocation);
   free(attr->iterative_allocations);
   free(attr);
   SD_task_set_data(task, NULL);
@@ -89,7 +90,6 @@ void SD_task_set_allocation(SD_task_t task,
   SD_task_set_data(task, attr);
 }
 
-
 int SD_task_get_iterative_allocations (SD_task_t task, int index){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   return attr->iterative_allocations[index-1];
@@ -118,7 +118,11 @@ void SD_task_set_estimated_finish_time(SD_task_t task, double finish_time){
 /*****************************************************************************/
 /*****************************************************************************/
 
-/* Bottom level comparison function (decreasing) used by qsort */
+/* List scheduling algorithms usually sort tasks according to an objective
+ * function. Here the bottom level value is used. Sorting tasks by non
+ * increasing bottom values ensures that all predecessors of a task are
+ * scheduled before this taks is considered for scheduling.
+ */
 int bottomLevelCompareTasks(const void *n1, const void *n2)
 {
   double bottom_level1, bottom_level2;
@@ -134,12 +138,17 @@ int bottomLevelCompareTasks(const void *n1, const void *n2)
     return 1;
 }
 
-
-int SD_task_is_marked(SD_task_t task){
-  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
-  return attr->marked;
-}
-
+/*****************************************************************************/
+/*****************************************************************************/
+/**************                   DFS helpers                   **************/
+/*****************************************************************************/
+/*****************************************************************************/
+/*
+ * During the Depth-First Search traversal of the DAG used to compute bottom,
+ * top, and precedence levels, it is mandatory to mark task as visited to
+ * prevent useless computations. The functions below mark and unmark tasks. A
+ * test to know whether a task is marked or not is also available.
+ */
 void SD_task_mark(SD_task_t task){
   TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
   attr->marked=1;
@@ -152,6 +161,24 @@ void SD_task_unmark(SD_task_t task){
   SD_task_set_data(task, attr);
 }
 
+int SD_task_is_marked(SD_task_t task){
+  TaskAttribute attr = (TaskAttribute) SD_task_get_data(task);
+  return attr->marked;
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/**************               Estimation functions              **************/
+/*****************************************************************************/
+/*****************************************************************************/
+
+/*
+ * Return a rough estimation of what would be the execution time of task given
+ * as input on a given number of workstations. The task has to be of kind
+ * SD_TASK_COMP_PAR_AMDAHL, as Amdahl's law is applied to get this estimation.
+ * It also assumes a fully homogeneous set of workstations as no distinction is
+ * made within the whole set.
+ */
 double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
   const SD_workstation_t *workstations = SD_workstation_get_list();
   double amount, alpha, power, estimate;
@@ -165,7 +192,24 @@ double SD_task_estimate_execution_time(SD_task_t task, int nworkstations){
       SD_task_get_name(task), estimate);
   return estimate;
 }
+/*
+ * Return a rough estimation of what would be the area taken by the task given
+ * as input, i.e., its execution time multiplied by the number of workstations
+ * the task is allocated on. This function has the same restrictions and makes
+ * the same assumptions as the SD_task_estimate_execution_time() function.
+ */
+double SD_task_estimate_area(SD_task_t task, int nworkstations) {
+  return SD_task_estimate_execution_time(task, nworkstations) * nworkstations;
+}
 
+/*
+ * Return an estimation of the minimal time before which a task can start. This
+ * time depends on the estimated finished time of the compute ancestors of the
+ * task, as set when they have been scheduled. Two cases are considered,
+ * depending on whether an ancestor is 'linked' to the task through a flow or
+ * control dependency. Flow dependencies imply to look at the grand parents of
+ * the task, while control dependencies look at the parent tasks directly.
+ */
 double SD_task_estimate_minimal_start_time(SD_task_t task){
   unsigned int i;
   double min_start_time=0.0;
@@ -188,9 +232,11 @@ double SD_task_estimate_minimal_start_time(SD_task_t task){
   return min_start_time;
 }
 
-double SD_task_estimate_area(SD_task_t task, int nworkstations) {
-  return SD_task_estimate_execution_time(task, nworkstations) * nworkstations;
-}
+/*****************************************************************************/
+/*****************************************************************************/
+/**************              DFS internal functions             **************/
+/*****************************************************************************/
+/*****************************************************************************/
 
 double bottom_level_recursive_computation(SD_task_t task){
   unsigned int i;
@@ -372,14 +418,14 @@ int precedence_level_recursive_computation(SD_task_t task){
 }
 
 // TODO adapt to parallel tasks
-void add_resource_dependency(SD_task_t task, SD_workstation_t workstation){
-  SD_task_t last_scheduled_task =
-      SD_workstation_get_last_scheduled_task(workstation);
-  if ((last_scheduled_task) &&
-      (SD_task_get_state(last_scheduled_task) != SD_DONE) &&
-      (SD_task_get_state(last_scheduled_task) != SD_FAILED) &&
-      (!SD_task_dependency_exists(SD_workstation_get_last_scheduled_task(
-          workstation), task)))
-    SD_task_dependency_add("resource", NULL, last_scheduled_task, task);
-    SD_workstation_set_last_scheduled_task(workstation, task);
-}
+//void add_resource_dependency(SD_task_t task, SD_workstation_t workstation){
+//  SD_task_t last_scheduled_task =
+//      SD_workstation_get_last_scheduled_task(workstation);
+//  if ((last_scheduled_task) &&
+//      (SD_task_get_state(last_scheduled_task) != SD_DONE) &&
+//      (SD_task_get_state(last_scheduled_task) != SD_FAILED) &&
+//      (!SD_task_dependency_exists(SD_workstation_get_last_scheduled_task(
+//          workstation), task)))
+//    SD_task_dependency_add("resource", NULL, last_scheduled_task, task);
+//    SD_workstation_set_last_scheduled_task(workstation, task);
+//}
