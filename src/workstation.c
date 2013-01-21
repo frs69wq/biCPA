@@ -57,8 +57,6 @@ void SD_workstation_set_last_scheduled_task(SD_workstation_t workstation,
  *   - last_scheduled_task = NULL
  */
 void reset_workstation_attributes() {
-  //TODO check if 0.0 is a good value. Maybe better to use the current
-  //     simulated time
   int i;
   int nworkstations = SD_workstation_get_number();
   const SD_workstation_t *workstations = SD_workstation_get_list();
@@ -138,8 +136,6 @@ int NavailableAtCompareWorkstations(const void *n1, const void *n2) {
  * there, thus incrementing the peak value.
  */
 int compute_peak_resource_usage() {
-  //TODO check if 0.0 is a good value. Maybe better to use the start time of the
-  //     current simulation
   int i, peak=0;
   int nworkstations = SD_workstation_get_number();
   const SD_workstation_t *workstations = SD_workstation_get_list();

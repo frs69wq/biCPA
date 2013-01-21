@@ -535,17 +535,3 @@ int precedence_level_recursive_computation(SD_task_t task){
 
   return my_prec_level;
 }
-
-
-// TODO adapt to parallel tasks
-//void add_resource_dependency(SD_task_t task, SD_workstation_t workstation){
-//  SD_task_t last_scheduled_task =
-//      SD_workstation_get_last_scheduled_task(workstation);
-//  if ((last_scheduled_task) &&
-//      (SD_task_get_state(last_scheduled_task) != SD_DONE) &&
-//      (SD_task_get_state(last_scheduled_task) != SD_FAILED) &&
-//      (!SD_task_dependency_exists(SD_workstation_get_last_scheduled_task(
-//          workstation), task)))
-//    SD_task_dependency_add("resource", NULL, last_scheduled_task, task);
-//    SD_workstation_set_last_scheduled_task(workstation, task);
-//}

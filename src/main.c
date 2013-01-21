@@ -82,17 +82,12 @@ int main(int argc, char **argv) {
       }
 
       set_bottom_levels (dag);
-      set_top_levels (dag);
-      set_precedence_levels(dag);
 
-      if (XBT_LOG_ISENABLED(biCPA, xbt_log_priority_debug)){
+      if (XBT_LOG_ISENABLED(biCPA, xbt_log_priority_verbose)){
         xbt_dynar_foreach(dag, cursor, task) {
           if (SD_task_get_kind(task) != SD_TASK_COMM_PAR_MXN_1D_BLOCK)
-            XBT_DEBUG("%s: bl=%f, tl=%f, path=%f, pl=%d",
-                SD_task_get_name(task), SD_task_get_bottom_level(task),
-                SD_task_get_top_level(task),
-                SD_task_get_bottom_level(task) + SD_task_get_top_level(task),
-                SD_task_get_precedence_level(task));
+            XBT_VERB("%s: bl=%f",
+                SD_task_get_name(task), SD_task_get_bottom_level(task));
         }
       }
       break;

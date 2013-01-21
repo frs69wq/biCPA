@@ -101,7 +101,7 @@ void set_allocations_from_iteration(xbt_dynar_t dag, int index){
     if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
       SD_task_set_allocation_size(task,
           SD_task_get_iterative_allocations(task, index));
-      XBT_DEBUG("Allocation of task '%s' is set to %d (check = %d)",
+      XBT_INFO("Allocation of task '%s' is set to %d (check = %d)",
           SD_task_get_name(task), SD_task_get_allocation_size(task),
           SD_task_get_iterative_allocations(task, index));
     }
@@ -121,6 +121,8 @@ void map_allocations(xbt_dynar_t dag){
     SD_task_schedulel(root, 1, SD_workstation_get_list());
     SD_task_set_estimated_finish_time(root, 0.0);
   }
+
+  set_bottom_levels(dag);
 
   xbt_dynar_sort(dag, bottomLevelCompareTasks);
 
@@ -204,22 +206,14 @@ void reset_simulation (xbt_dynar_t dag) {
         if (SD_task_dependency_exists(parent, task) &&
             (SD_task_dependency_get_name(parent,task)) &&
             (!strcmp(SD_task_dependency_get_name(parent,task), "resource"))){
-          XBT_INFO("Remove resource dependency between tasks '%s' and '%s'",
+          XBT_DEBUG("Remove resource dependency between tasks '%s' and '%s'",
               SD_task_get_name(parent), SD_task_get_name(task));
           SD_task_dependency_remove(parent, task);
         }
       }
     }
   }
-  //TODO check if not better to add another parameter to indicate which
-  //     simulated time value to use to reset some attributes
   reset_workstation_attributes();
-  //TODO check how to reset task scheduling parameters
-  xbt_dynar_foreach(dag, i, task){
-    SD_task_dump(task);
-  }
   SD_application_reinit();
   set_bottom_levels(dag);
-  set_top_levels(dag);
-  set_precedence_levels(dag);
 }
