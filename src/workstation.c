@@ -83,9 +83,20 @@ int nameCompareWorkstations(const void *w1, const void *w2){
       SD_workstation_get_name(*((SD_workstation_t *)w2)));
 }
 
-/* Available date comparison (decreasing) */
-int availableAtCompareWorkstations(const void *n1, const void *n2)
-{
+/*
+ * When determining what is the 'best' workstation set to execute a given, the
+ * rationale is to sort the whole set with regard to the estimated minimal start
+ * time of the considered task and the availability dates of the workstations.
+ * All the workstations that are available before this minimal start are sorted
+ * in decreasing order of available_at values and placed at the beginning of the
+ * set. Those that are available after are sorted in increasing order of
+ * available_at values and placed at the end of the set. This way idle times are
+ * minimize, and the earliest available workstations are selected, whether the
+ * task has to wait or not.
+ * The two functions below sorts workstations according to the values of the
+ * available_at attribute, in decreasing and increasing order respectively.
+ */
+int availableAtCompareWorkstations(const void *n1, const void *n2) {
   double avail1, avail2;
 
   avail1 = SD_workstation_get_available_at(*((SD_workstation_t*)n1));
@@ -99,7 +110,6 @@ int availableAtCompareWorkstations(const void *n1, const void *n2)
     return 1;
 }
 
-/* Available date comparison (increasing) */
 int NavailableAtCompareWorkstations(const void *n1, const void *n2) {
   double avail1, avail2;
 

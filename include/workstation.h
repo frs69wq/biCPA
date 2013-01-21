@@ -6,34 +6,44 @@ typedef struct _WorkstationAttribute *WorkstationAttribute;
 struct _WorkstationAttribute {
   /* Earliest time at which a workstation is ready to execute a task*/
   double available_at;
+  /* To keep track of potential resource dependencies */
   SD_task_t last_scheduled_task;
 };
 
-/*
- * Creator and destructor
- */
+/*****************************************************************************/
+/*****************************************************************************/
+/**************          Attribute management functions         **************/
+/*****************************************************************************/
+/*****************************************************************************/
 void SD_workstation_allocate_attribute(SD_workstation_t );
 void SD_workstation_free_attribute(SD_workstation_t );
 
-/*
- * Accessors
- */
 double SD_workstation_get_available_at(SD_workstation_t);
 void SD_workstation_set_available_at(SD_workstation_t, double);
 SD_task_t SD_workstation_get_last_scheduled_task( SD_workstation_t workstation);
 void SD_workstation_set_last_scheduled_task(SD_workstation_t workstation,
                                             SD_task_t task);
+void reset_workstation_attributes();
 
-/*
- * Comparators
- */
+/*****************************************************************************/
+/*****************************************************************************/
+/**************               Comparison functions              **************/
+/*****************************************************************************/
+/*****************************************************************************/
 int nameCompareWorkstations(const void *, const void *);
 int availableAtCompareWorkstations(const void *n1, const void *n2);
 int NavailableAtCompareWorkstations(const void *n1, const void *n2);
 
+/*****************************************************************************/
+/*****************************************************************************/
+/**************               Accounting functions              **************/
+/*****************************************************************************/
+/*****************************************************************************/
 int compute_peak_resource_usage();
+
+
+
 SD_workstation_t * get_best_workstation_set(double time);
-void reset_workstation_attributes();
 
 extern char* platform_file;
 
