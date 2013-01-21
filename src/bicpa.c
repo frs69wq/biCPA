@@ -268,28 +268,26 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   alloc_time = getTime() - alloc_time;
 
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      XBT_VERB("Intermediate allocations of task '%s' are:",
-          SD_task_get_name(task));
-      for(j = 1; j < nworkstations; j++){
-        XBT_VERB("  - %d : %d", j,
-            SD_task_get_iterative_allocations(task, j));
+  if (XBT_LOG_ISENABLED(heuristic, xbt_log_priority_debug)){
+    xbt_dynar_foreach(dag, i, task){
+      if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
+        XBT_DEBUG("Intermediate allocations of task '%s' are:",
+            SD_task_get_name(task));
+        for(j = 1; j < nworkstations; j++){
+          XBT_DEBUG("  - %d : %d", j,
+              SD_task_get_iterative_allocations(task, j));
+        }
       }
     }
   }
+
   XBT_VERB("Allocations built in %f seconds", alloc_time);
 
   mapping_time = getTime();
 
   for (j = 1; j <= nworkstations; j++){
     set_allocations_from_iteration(dag, j);
-    xbt_dynar_sort(dag, bottomLevelCompareTasks);
-//    SD_task_schedulel(task, SD_task_get_allocation_size(task),
-//            SD_task_get_workstation_list(task));
-        //TODO add resource dependencies
-//      }
-    exit(0);
+    map_allocations(dag);
 
     makespan = SD_get_clock ();
     SD_simulate(-1.);
@@ -302,10 +300,11 @@ void bicpaSchedule(xbt_dynar_t dag) {
       siList[j] = newSchedInfo(j, makespan, compute_total_work(dag));
     }
 
-    XBT_DEBUG("[%d] mkspn = %.10f, efficiency = %.10f, peak_alloc = %d",
+    XBT_VERB("[%d] mkspn = %.10f, efficiency = %.10f, peak_alloc = %d",
         siList[j]->nhosts+1, siList[j]->makespan,
         siList[j]->work, peak_alloc);
     reset_simulation (dag);
+    exit(0);
   }
 
   cpa_makespan = siList[nworkstations-1]->makespan;
@@ -344,14 +343,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
       bicriteria_nhosts+1);
 
   set_allocations_from_iteration(dag, bicriteria_nhosts);
-  xbt_dynar_sort(dag, bottomLevelCompareTasks);
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_schedulel(task, SD_task_get_allocation_size(task),
-          SD_task_get_workstation_list(task));
-      //TODO add resource dependencies
-    }
-  }
+  map_allocations(dag);
 
   mapping_time = getTime() - mapping_time;
 
@@ -372,14 +364,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   reset_simulation (dag);
 
   set_allocations_from_iteration(dag, makespan_nhosts);
-  xbt_dynar_sort(dag, bottomLevelCompareTasks);
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_schedulel(task, SD_task_get_allocation_size(task),
-          SD_task_get_workstation_list(task));
-      //TODO add resource dependencies
-    }
-  }
+  map_allocations(dag);
 
   makespan = SD_get_clock ();
   SD_simulate(-1.);
@@ -398,14 +383,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
   reset_simulation (dag);
 
   set_allocations_from_iteration(dag, work_nhosts);
-  xbt_dynar_sort(dag,bottomLevelCompareTasks);
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_schedulel(task, SD_task_get_allocation_size(task),
-          SD_task_get_workstation_list(task));
-      //TODO add resource dependencies
-    }
-  }
+  map_allocations(dag);
 
   makespan = SD_get_clock ();
   SD_simulate(-1.);
@@ -427,14 +405,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
       cpa_makespan, cpa_work, 0); // then minimizes the sum
 
   set_allocations_from_iteration(dag, bicriteria_nhosts);
-  xbt_dynar_sort(dag,bottomLevelCompareTasks);
-  xbt_dynar_foreach(dag, i, task){
-    if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
-      SD_task_schedulel(task, SD_task_get_allocation_size(task),
-          SD_task_get_workstation_list(task));
-      //TODO add resource dependencies
-    }
-  }
+  map_allocations(dag);
 
   makespan = SD_get_clock ();
   SD_simulate(-1.);
