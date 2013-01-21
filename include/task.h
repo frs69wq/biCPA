@@ -72,6 +72,9 @@ void SD_task_unmark(SD_task_t task);
 double SD_task_estimate_execution_time(SD_task_t task, int nworkstations);
 double SD_task_estimate_area(SD_task_t task, int nworkstations);
 double SD_task_estimate_minimal_start_time(SD_task_t task);
+double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
+    double size);
+double SD_task_estimate_last_data_arrival_time (SD_task_t task);
 
 /*****************************************************************************/
 /*****************************************************************************/

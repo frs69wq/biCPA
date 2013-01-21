@@ -232,6 +232,118 @@ double SD_task_estimate_minimal_start_time(SD_task_t task){
   return min_start_time;
 }
 
+double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
+    double size){
+  int src_allocation_size, dst_allocation_size;
+  SD_workstation_t *src_allocation, *dst_allocation;
+  const SD_link_t* route=NULL;
+  int route_size;
+  double transfer_time =0.0;
+  int src_index = -1, dst_index=-1;
+  int i, s, d;;
+
+  src_allocation_size = SD_task_get_allocation_size(src);
+  src_allocation = SD_task_get_allocation(src);
+  dst_allocation_size = SD_task_get_allocation_size(dst);
+  dst_allocation = SD_task_get_allocation(dst);
+
+  qsort((void *)src_allocation,src_allocation_size, sizeof(SD_workstation_t),
+      nameCompareWorkstations);
+  qsort((void *)dst_allocation,dst_allocation_size, sizeof(SD_workstation_t),
+      nameCompareWorkstations);
+
+  i = 0;
+  if (src_allocation_size == dst_allocation_size) {
+    for (s = 0; s < src_allocation_size; s++) {
+      for (d = 0; d < dst_allocation_size; d++) {
+        if (!strcmp(SD_workstation_get_name (src_allocation[s]),
+            SD_workstation_get_name (dst_allocation[d]))) {
+          i++;
+          break;
+        }
+      }
+      if (i <= s)
+        break;
+    }
+  }
+
+  if (i == src_allocation_size) {
+    /* both configurations are identical so transfer_time = 0 */
+    return 0.0;
+  } else {
+    /* Found 2 different hosts. The first host belongs to src
+       and the second one belongs to dest. Then
+       compute the transfer time walking through the route between
+       them */
+    for (s = 0; s < src_allocation_size; s++) {
+      for (d = 0; d < dst_allocation_size; d++) {
+        if (strcmp(SD_workstation_get_name (src_allocation[s]),
+            SD_workstation_get_name (dst_allocation[d]))) {
+          src_index = s;
+          dst_index = d;
+          break;
+        }
+      }
+      if (src_index != -1)
+        break;
+    }
+    route= SD_route_get_list (src_allocation[src_index],
+        dst_allocation[dst_index]);
+    route_size = SD_route_get_size(src_allocation[src_index],
+        dst_allocation[dst_index]);
+
+    /* first link */
+    transfer_time = size/
+        (SD_link_get_current_bandwidth(route[0])*src_allocation_size);
+    for (i = 1; i < route_size - 1; i++) {
+      if (transfer_time < (size /
+          SD_link_get_current_bandwidth(route[i])))
+        transfer_time = size / SD_link_get_current_bandwidth(route[i]);
+    }
+
+    /* last link */
+    if (transfer_time < size /
+        (SD_link_get_current_bandwidth(route[route_size-1]) *
+            dst_allocation_size)){
+      transfer_time = size /
+          (SD_link_get_current_bandwidth(route[route_size-1]) *
+              dst_allocation_size);
+    }
+
+    transfer_time +=
+        SD_route_get_current_latency (src_allocation[src_index],
+            dst_allocation[dst_index]);
+    return transfer_time;
+  }
+}
+
+double SD_task_estimate_last_data_arrival_time (SD_task_t task){
+  unsigned int i;
+  double last_data_arrival = -1., data_availability, estimated_transfer_time;
+  SD_task_t parent, grand_parent;
+  xbt_dynar_t parents, grand_parents;
+
+  parents = SD_task_get_parents(task);
+
+  xbt_dynar_foreach(parents, i, parent){
+    if (SD_task_get_kind(parent) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
+      grand_parents = SD_task_get_parents(parent);
+      xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
+      estimated_transfer_time =
+          SD_task_estimate_transfer_time_from(grand_parent, task,
+              SD_task_get_amount(parent));
+      data_availability = SD_task_get_estimated_finish_time(grand_parent)+
+          estimated_transfer_time;
+    } else {
+      data_availability = SD_task_get_estimated_finish_time(parent);
+    }
+
+    if (last_data_arrival < data_availability)
+      last_data_arrival = data_availability;
+  }
+  return last_data_arrival;
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /**************              DFS internal functions             **************/
@@ -416,6 +528,7 @@ int precedence_level_recursive_computation(SD_task_t task){
 
   return my_prec_level;
 }
+
 
 // TODO adapt to parallel tasks
 //void add_resource_dependency(SD_task_t task, SD_workstation_t workstation){
