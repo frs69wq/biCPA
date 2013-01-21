@@ -11,6 +11,7 @@ void set_precedence_levels (xbt_dynar_t dag);
 void set_allocations_from_iteration(xbt_dynar_t dag, int index);
 double compute_total_work (xbt_dynar_t dag);
 void reset_simulation (xbt_dynar_t dag);
+void map_allocations(xbt_dynar_t dag);
 
 extern int with_communications;
 extern char* dagfile;
