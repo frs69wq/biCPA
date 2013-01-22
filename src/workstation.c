@@ -2,9 +2,6 @@
 #include "workstation.h"
 #include "simdag/simdag.h"
 
-XBT_LOG_NEW_DEFAULT_SUBCATEGORY(workstation, biCPA,
-    "Logging specific to workstations");
-
 /*****************************************************************************/
 /*****************************************************************************/
 /**************          Attribute management functions         **************/
