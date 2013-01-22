@@ -295,18 +295,17 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
     peak_alloc = compute_peak_resource_usage();
     if (with_communications){
-      siList[j] = newSchedInfo(j, makespan, makespan * peak_alloc);
+      siList[j-1] = newSchedInfo(j, makespan, makespan * peak_alloc);
     } else {
-      siList[j] = newSchedInfo(j, makespan, compute_total_work(dag));
+      siList[j-1] = newSchedInfo(j, makespan, compute_total_work(dag));
     }
 
     XBT_VERB("[%d] makespan = %.3f, work = %.3f, peak_alloc = %d",
-        siList[j]->nhosts, siList[j]->makespan,
-        siList[j]->work, peak_alloc);
+        siList[j-1]->nhosts, siList[j-1]->makespan,
+        siList[j-1]->work, peak_alloc);
     reset_simulation (dag);
   }
 
-  exit(0);
   cpa_makespan = siList[nworkstations-1]->makespan;
   cpa_work = siList[nworkstations-1]->work;
 
