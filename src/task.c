@@ -234,6 +234,23 @@ double SD_task_estimate_minimal_start_time(SD_task_t task){
   return min_start_time;
 }
 
+/*
+ * Return a rough estimation of the time needed to transfer 'size' bytes of data
+ * between two allocated tasks 'src' and 'dst'. Two cases are distinguished:
+ *   - both allocations are strictly identical, then the route from the first
+ *     workstation to itself (down link, backbone, up link) is considered,
+ *   - Otherwise, the function first find a pair of distinct workstations from
+ *     the src and dst allocations.
+ * In both cases, the estimation is the sum of
+ *  - the time to send (1/src_allocation_size)th of the data on the private down
+ *    link of one of the workstation in 'src_allocation'
+ *  - the maximum time to send the entire data over each link in between
+ *  - the time to send (1/dst_allocation_size)th of the data on the private up
+ *    link of one of the workstation in 'dst_allocation'
+ *  - the sum of the link's latencies on the route
+ * This estimation doesn't take concurrent transfers (and then bandwidth sharing
+ * between them) into account. Transfer times are thus underestimated.
+*/
 double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
     double size){
   int src_allocation_size, dst_allocation_size;
@@ -325,7 +342,14 @@ double SD_task_estimate_transfer_time_from(SD_task_t src, SD_task_t dst,
   return transfer_time;
 }
 
-
+/*
+ * Estimate the time at which all the input data of a task are available (i.e.,
+ * have been transfered to) on its current allocation. This estimation
+ * corresponds to the maximum value among the compute parents of the task of
+ * the sum of the estimated finish time of the parent and estimated transfer
+ * time of the data sent by this parent. For control dependencies, the second
+ * part is obviously discarded.
+ */
 double SD_task_estimate_last_data_arrival_time (SD_task_t task){
   unsigned int i;
   double last_data_arrival = -1., data_availability, estimated_transfer_time;
@@ -384,10 +408,6 @@ double bottom_level_recursive_computation(SD_task_t task){
   xbt_dynar_foreach(children, i, child){
     if (SD_task_get_kind(child) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
       grand_children = SD_task_get_children(child);
-      if (xbt_dynar_length(grand_children) > 1) {
-        XBT_WARN("Transfer %s (type = %d) has 2 children",
-                 SD_task_get_name(child), SD_task_get_kind(child));
-      }
       xbt_dynar_get_cpy(grand_children, 0, &grand_child);
       if (SD_task_is_marked(grand_child)){
         current_child_bottom_level = SD_task_get_bottom_level(grand_child);
@@ -440,10 +460,6 @@ double top_level_recursive_computation(SD_task_t task){
   xbt_dynar_foreach(parents, i, parent){
     if (SD_task_get_kind(parent) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
       grand_parents = SD_task_get_parents(parent);
-      if (xbt_dynar_length(grand_parents)>1) {
-        XBT_WARN("Transfer %s (type = %d) has 2 parents",
-                 SD_task_get_name(parent), SD_task_get_kind(parent));
-      }
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
       if (SD_task_is_marked(grand_parent)){
         current_parent_top_level = SD_task_get_top_level(grand_parent) +
@@ -491,8 +507,6 @@ int precedence_level_recursive_computation(SD_task_t task){
   SD_task_t parent, grand_parent=NULL;
   xbt_dynar_t parents, grand_parents;
 
-
-
   if (!strcmp(SD_task_get_name(task),"root")){
     XBT_DEBUG("root's precedence level is 0.0");
     SD_task_mark(task);
@@ -505,10 +519,6 @@ int precedence_level_recursive_computation(SD_task_t task){
   xbt_dynar_foreach(parents, i, parent){
     if (SD_task_get_kind(parent) == SD_TASK_COMM_PAR_MXN_1D_BLOCK) {
       grand_parents = SD_task_get_parents(parent);
-      if (xbt_dynar_length(grand_parents)>1) {
-        XBT_WARN("Transfer %s (type = %d) has 2 parents",
-                 SD_task_get_name(parent), SD_task_get_kind(parent));
-      }
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
       if (SD_task_is_marked(grand_parent)){
         current_parent_prec_level =
