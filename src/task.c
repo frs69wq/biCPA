@@ -223,12 +223,14 @@ double SD_task_estimate_minimal_start_time(SD_task_t task){
       xbt_dynar_get_cpy(grand_parents, 0, &grand_parent);
         if (SD_task_get_estimated_finish_time(grand_parent) > min_start_time)
           min_start_time = SD_task_get_estimated_finish_time(grand_parent);
+      xbt_dynar_free_container(&grand_parents);
     }
     else{
       if (SD_task_get_estimated_finish_time(parent) > min_start_time)
         min_start_time = SD_task_get_estimated_finish_time(parent);
     }
   }
+  xbt_dynar_free_container(&parents);
   return min_start_time;
 }
 
@@ -341,6 +343,7 @@ double SD_task_estimate_last_data_arrival_time (SD_task_t task){
               SD_task_get_amount(parent));
       data_availability = SD_task_get_estimated_finish_time(grand_parent)+
           estimated_transfer_time;
+      xbt_dynar_free_container(&grand_parents);
     } else {
       data_availability = SD_task_get_estimated_finish_time(parent);
     }
@@ -348,6 +351,7 @@ double SD_task_estimate_last_data_arrival_time (SD_task_t task){
     if (last_data_arrival < data_availability)
       last_data_arrival = data_availability;
   }
+  xbt_dynar_free_container(&parents);
   return last_data_arrival;
 }
 
@@ -415,6 +419,7 @@ double bottom_level_recursive_computation(SD_task_t task){
   return my_bottom_level ;
 }
 
+/* This function is actually not used by biCPA */
 double top_level_recursive_computation(SD_task_t task){
   unsigned int i;
   double max_top_level = 0.0, my_top_level, current_parent_top_level = 0.0;
@@ -479,6 +484,7 @@ double top_level_recursive_computation(SD_task_t task){
   return my_top_level;
 }
 
+/* This function is actually not used by biCPA */
 int precedence_level_recursive_computation(SD_task_t task){
   unsigned int i;
   int my_prec_level = -1, current_parent_prec_level = 0;

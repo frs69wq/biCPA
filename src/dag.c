@@ -248,6 +248,7 @@ void map_allocations(xbt_dynar_t dag){
 
         SD_workstation_set_last_scheduled_task(allocation[j], task);
       }
+      free(allocation);
     }
   }
 }
@@ -284,6 +285,7 @@ void reset_simulation (xbt_dynar_t dag) {
         }
       }
     }
+    xbt_dynar_free_container(&parents);
   }
   reset_workstation_attributes();
   SD_application_reinit();
