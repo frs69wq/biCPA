@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
     free(SD_task_get_data(task));
     SD_task_destroy(task);
   }
+  xbt_dynar_free_container(&dag);
 
   for(cursor = 0; cursor < total_nworkstations; cursor++)
     SD_workstation_free_attribute(workstations[cursor]);
