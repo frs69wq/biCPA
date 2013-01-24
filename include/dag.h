@@ -14,8 +14,6 @@ void set_allocations_from_iteration(xbt_dynar_t dag, int index);
 void map_allocations(xbt_dynar_t dag);
 void reset_simulation (xbt_dynar_t dag);
 
-void bicpaSchedule(xbt_dynar_t dag);
-
 extern int with_communications;
 extern char* dagfile;
 
