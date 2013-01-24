@@ -8,6 +8,7 @@
 #include "simdag/simdag.h"
 #include "xbt.h"
 
+#include "bicpa.h"
 #include "dag.h"
 #include "task.h"
 #include "workstation.h"
