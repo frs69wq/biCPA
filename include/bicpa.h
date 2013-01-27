@@ -5,6 +5,7 @@ typedef struct _SchedInfo {
   int nworkstations;
   double makespan;
   double work;
+  int peak_allocation;
 } *Sched_info_t;
 
 void bicpaSchedule(xbt_dynar_t dag);
