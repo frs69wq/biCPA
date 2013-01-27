@@ -13,15 +13,44 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(heuristic, biCPA, "Logging specific to biCPA");
 
 /*
  * Create a data structure to store the results of a schedule (namely the
- * makespan and the work) after its simulation.
+ * size of the target cluster, the makespan, the work and the peak resource
+ * usage) after its simulation.
  */
-Sched_info_t new_sched_info(int nworkstations, double makespan, double work) {
+Sched_info_t new_sched_info(int nworkstations, double makespan, double work,
+                            int peak_allocation) {
   Sched_info_t s = (Sched_info_t) calloc (1, sizeof(struct _SchedInfo));
   s->nworkstations = nworkstations;
   s->makespan = makespan;
   s->work = work;
-
+  s->peak_allocation = peak_allocation;
   return s;
+}
+
+Sched_info_t simulate_schedule(xbt_dynar_t dag, int nworkstations){
+  double makespan;
+  int peak_allocation;
+  xbt_dynar_t executed_tasks;
+  Sched_info_t s;
+
+  makespan = SD_get_clock ();
+  executed_tasks = SD_simulate(-1.);
+  xbt_dynar_free_container(&executed_tasks);
+  makespan = SD_get_clock () - makespan;
+
+  peak_allocation = compute_peak_resource_usage();
+  if (with_communications){
+    s = new_sched_info(nworkstations, makespan, makespan * peak_allocation,
+        peak_allocation);
+  } else {
+    s = new_sched_info(nworkstations, makespan, compute_total_work(dag),
+        peak_allocation);
+  }
+  return s;
+}
+
+void print_sched_info(Sched_info_t s){
+  XBT_VERB("[%d] makespan = %.3f, work = %.3f, peak_alloc = %d",
+      s->nworkstations, s->makespan, s->work, s->peak_allocation);
 }
 
 /* Comparison function to sort schedule results by increasing makespan values */
@@ -72,7 +101,7 @@ void get_non_dominated_schedules(int *nno_dom, Sched_info_t **no_dom_list,
   }
 }
 /* Return the */
-int get_best_makespan(int size, Sched_info_t *list, double cpa_work){
+int get_best_makespan_index(int size, Sched_info_t *list, double cpa_work){
   int i=0;
 
   qsort(list, size, sizeof(Sched_info_t), ImakespanCompareSchedInfo);
@@ -81,7 +110,7 @@ int get_best_makespan(int size, Sched_info_t *list, double cpa_work){
   return i;
 }
 
-int get_best_work(int size, Sched_info_t *list, double cpa_makespan){
+int get_best_work_index(int size, Sched_info_t *list, double cpa_makespan){
   int i=0;
 
   qsort(list, size, sizeof(Sched_info_t), IworkCompareSchedInfo);
@@ -329,182 +358,134 @@ void set_multiple_allocations(xbt_dynar_t dag) {
 void bicpaSchedule(xbt_dynar_t dag) {
   unsigned int i;
   int j, tmp;
-  int makespan_nhosts, work_nhosts, bicriteria_nhosts;
+  int best_makespan_nworkstations, best_work_nworkstations;
+  int perfect_equity_nworkstations, min_sum_nworkstations;
   const int nworkstations = SD_workstation_get_number();
-  int peak_alloc;
-  double makespan, total_work;
   double cpa_makespan, cpa_work;
   double alloc_time, mapping_time;
   SD_task_t task;
-  xbt_dynar_t executed_tasks;
-
   int nno_dom=0;
   Sched_info_t *siList, *no_dom_list=NULL;
 
   siList = (Sched_info_t*) calloc (nworkstations, sizeof(Sched_info_t));
 
+  /*
+   * First step: Determine multiple allocations for each task, one for each
+   * assumed size of the target cluster between 1 and nworkstations.
+   */
   alloc_time = getTime();
-
   set_multiple_allocations (dag);
-
   alloc_time = getTime() - alloc_time;
+  XBT_VERB("Allocations built in %f seconds", alloc_time);
 
-  if (XBT_LOG_ISENABLED(heuristic, xbt_log_priority_debug)){
-    xbt_dynar_foreach(dag, i, task){
+  /* Display all allocations in DEBUG mode */
+  if (XBT_LOG_ISENABLED(heuristic, xbt_log_priority_debug))
+    xbt_dynar_foreach(dag, i, task)
       if (SD_task_get_kind(task) == SD_TASK_COMP_PAR_AMDAHL){
         XBT_DEBUG("Intermediate allocations of task '%s' are:",
             SD_task_get_name(task));
-        for(j = 1; j < nworkstations; j++){
-          XBT_DEBUG("  - %d : %d", j,
-              SD_task_get_iterative_allocations(task, j));
-        }
+        for(j = 1; j < nworkstations; j++)
+          XBT_DEBUG(" - %d: %d", j, SD_task_get_iterative_allocations(task, j));
       }
-    }
-  }
 
-  XBT_VERB("Allocations built in %f seconds", alloc_time);
-
+  /*
+   * Second step: Build and simulate a schedule for each assumed size of the
+   * target cluster. Store the performance metrics (makespan, work, peak
+   * resource usage) for each of them.
+   */
   mapping_time = getTime();
 
   for (j = 1; j <= nworkstations; j++){
     set_allocations_from_iteration(dag, j);
     map_allocations(dag);
-
-    makespan = SD_get_clock ();
-    executed_tasks = SD_simulate(-1.);
-    xbt_dynar_free_container(&executed_tasks);
-    makespan = SD_get_clock () - makespan;
-
-    peak_alloc = compute_peak_resource_usage();
-    if (with_communications){
-      siList[j-1] = new_sched_info(j, makespan, makespan * peak_alloc);
-    } else {
-      siList[j-1] = new_sched_info(j, makespan, compute_total_work(dag));
-    }
-
-    XBT_VERB("[%d] makespan = %.3f, work = %.3f, peak_alloc = %d",
-        siList[j-1]->nworkstations, siList[j-1]->makespan,
-        siList[j-1]->work, peak_alloc);
+    siList[j-1] = simulate_schedule(dag, j);
+    print_sched_info(siList[j-1]);
     reset_simulation (dag);
   }
 
+  /*
+   * The last schedule (on the whole cluster that comprises 'nworkstations'
+   * corresponds to the one built from the seminal CPA allocation procedure.
+   * The achieved makespan and work will be used to determine the bi-criteria
+   * optimizations.
+   */
   cpa_makespan = siList[nworkstations-1]->makespan;
   cpa_work = siList[nworkstations-1]->work;
 
-  tmp = get_best_work(nworkstations, siList, cpa_makespan);
-
-  work_nhosts = siList[tmp]->nworkstations;
-  total_work = siList[tmp]->work;
-
-  qsort(siList, nworkstations, sizeof(Sched_info_t), ImakespanCompareSchedInfo);
-
-  makespan_nhosts =  siList[0]->nworkstations;
-  makespan = siList[0]->makespan;
-
-  for (i=0 ; i < nworkstations; i++){
-    XBT_DEBUG("%.3f %.3f %d", siList[i]->makespan/cpa_makespan,
-        siList[i]->work/cpa_work, siList[i]->nworkstations+1);
+  /*
+   * Third step: determine the assumed sizes of the target cluster (hence the
+   * tasks' allocations) that lead to the four biCPA variants:
+   * biCPA-M: smallest makespan without degrading the work achieved by CPA.
+   * biCPA-W: smallest work without degrading the makespan achieved by CPA.
+   * biCPA-E: bi-criteria optimization that favors the perfect equity of the
+   *          gains w.r.t. CPA in terms of makespan and work.
+   * biCPA-S: bi-criteria optimization that minimizes the sum of the gains
+   *          w.r.t. CPA in terms of makespan and work.
+   */
+  for (i = 0; i < nworkstations; i++){
+    XBT_INFO("%d: %.3f (%.3f) %.3f (%.3f)", siList[i]->nworkstations,
+        siList[i]->makespan, siList[i]->makespan/cpa_makespan,
+        siList[i]->work, siList[i]->work/cpa_work);
   }
+
+  tmp = get_best_work_index(nworkstations, siList, cpa_makespan);
+  best_work_nworkstations = siList[tmp]->nworkstations;
+
+  tmp = get_best_makespan_index(nworkstations, siList, cpa_work);
+  best_makespan_nworkstations = siList[tmp]->nworkstations;
 
   get_non_dominated_schedules(&nno_dom, &no_dom_list, siList);
-  XBT_DEBUG("And the non dominated are");
+  perfect_equity_nworkstations = getBiCriteriaTradeoff(nno_dom, no_dom_list,
+      cpa_makespan, cpa_work, 1);
 
-  for (i=0;i< nno_dom;i++){
-    XBT_DEBUG("%.5f %.5f %d", no_dom_list[i]->makespan/cpa_makespan,
-        no_dom_list[i]->work/cpa_work, no_dom_list[i]->nworkstations+1);
-  }
+  min_sum_nworkstations= getBiCriteriaTradeoff(nno_dom, no_dom_list,
+      cpa_makespan, cpa_work, 0);
 
-
-  bicriteria_nhosts = getBiCriteriaTradeoff(nno_dom, no_dom_list,
-      cpa_makespan, cpa_work, 1); //then perfect-equity
-
-  XBT_DEBUG("Best #hosts are: mkspn = %d, eff = %d, bicrit = %d",
-      makespan_nhosts+1,
-      work_nhosts+1,
-      bicriteria_nhosts+1);
-
-  set_allocations_from_iteration(dag, bicriteria_nhosts);
-  map_allocations(dag);
+  XBT_INFO("The four variants of biCPA assumes the following cluster sizes:");
+  XBT_INFO("  * biCPA-M: %d", best_makespan_nworkstations);
+  XBT_INFO("  * biCPA-W: %d", best_work_nworkstations);
+  XBT_INFO("  * biCPA-E: %d", perfect_equity_nworkstations);
+  XBT_INFO("  * biCPA-S: %d", min_sum_nworkstations);
 
   mapping_time = getTime() - mapping_time;
 
-  makespan = SD_get_clock ();
-  executed_tasks = SD_simulate(-1.);
-  xbt_dynar_free_container(&executed_tasks);
-  makespan = SD_get_clock () - makespan;
-  peak_alloc = compute_peak_resource_usage();
+  for (i = 0; i < nworkstations; i++){
+    if (siList[i]->nworkstations == best_makespan_nworkstations)
+      printf("%f:%f:biCPA-M:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+          platform_file, dagfile,
+          siList[i]->makespan,
+          siList[i]->work,
+          siList[i]->peak_allocation);
+    if (siList[i]->nworkstations == best_work_nworkstations)
+      printf("%f:%f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+          platform_file, dagfile,
+          siList[i]->makespan,
+          siList[i]->work,
+          siList[i]->peak_allocation);
+    if (siList[i]->nworkstations == perfect_equity_nworkstations)
+      printf("%f:%f:biCPA-E:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+          platform_file, dagfile,
+          siList[i]->makespan,
+          siList[i]->work,
+          siList[i]->peak_allocation);
+    if (siList[i]->nworkstations == min_sum_nworkstations)
+      printf("%f:%f:biCPA-S:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+          platform_file, dagfile,
+          siList[i]->makespan,
+          siList[i]->work,
+          siList[i]->peak_allocation);
+  }
 
-  if (with_communications)
-    total_work = makespan * peak_alloc;
-  else
-    total_work = compute_total_work (dag);
+  //  set_allocations_from_iteration(dag, best_work_nworkstations);
+//  map_allocations(dag);
+//  s = simulate_schedule(dag, best_work_nworkstations);
+//  print_sched_info(s);
+//  printf("%f:%f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+//      platform_file, dagfile,
+//      s->makespan, s->work, s->peak_allocation);
+//  free(s);
+//  reset_simulation (dag);
 
-  printf("%f:%f:biCPA-E:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
-      platform_file, dagfile,
-      makespan, total_work, peak_alloc);
-
-  reset_simulation (dag);
-
-  set_allocations_from_iteration(dag, makespan_nhosts);
-  map_allocations(dag);
-
-  makespan = SD_get_clock ();
-  executed_tasks = SD_simulate(-1.);
-  xbt_dynar_free_container(&executed_tasks);
-  makespan = SD_get_clock () - makespan;
-  peak_alloc = compute_peak_resource_usage();
-
-  if (with_communications)
-    total_work = makespan * peak_alloc;
-  else
-    total_work = compute_total_work (dag);
-
-  printf("%f:%f:biCPA-M:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
-      platform_file, dagfile,
-      makespan, total_work, peak_alloc);
-
-  reset_simulation (dag);
-
-  set_allocations_from_iteration(dag, work_nhosts);
-  map_allocations(dag);
-
-  makespan = SD_get_clock ();
-  executed_tasks = SD_simulate(-1.);
-  xbt_dynar_free_container(&executed_tasks);
-  makespan = SD_get_clock () - makespan;
-  peak_alloc = compute_peak_resource_usage();
-
-  if (with_communications)
-    total_work = makespan * peak_alloc;
-  else
-    total_work = compute_total_work (dag);
-
-  printf("%f:%f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
-      platform_file, dagfile,
-      makespan, total_work, peak_alloc);
-
-  reset_simulation (dag);
-
-  bicriteria_nhosts= getBiCriteriaTradeoff(nno_dom, no_dom_list,
-      cpa_makespan, cpa_work, 0); // then minimizes the sum
-
-  set_allocations_from_iteration(dag, bicriteria_nhosts);
-  map_allocations(dag);
-
-  makespan = SD_get_clock ();
-  executed_tasks = SD_simulate(-1.);
-  xbt_dynar_free_container(&executed_tasks);
-  makespan = SD_get_clock () - makespan;
-  peak_alloc = compute_peak_resource_usage();
-
-  if (with_communications)
-    total_work = makespan * peak_alloc;
-  else
-    total_work = compute_total_work (dag);
-
-  printf("%f:%f:biCPA-S:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
-      platform_file, dagfile,
-      makespan, total_work, peak_alloc);
   free(no_dom_list);
   for (i=0; i < nworkstations; i++)
     free(siList[i]);
