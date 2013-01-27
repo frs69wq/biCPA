@@ -131,7 +131,7 @@ int getBiCriteriaTradeoff(int size, Sched_info_t *list, double min_c,
     min_diff = (list[0]->work/min_w)+(list[0]->makespan/min_c);
 
   XBT_DEBUG("%d : Diff of normalized values: %f (%f %f)",
-      list[0]->nworkstations+1, min_diff,
+      list[0]->nworkstations, min_diff,
       list[0]->makespan/min_c,list[0]->work/min_w);
 
   for (i=1;i<size;i++){
@@ -141,7 +141,7 @@ int getBiCriteriaTradeoff(int size, Sched_info_t *list, double min_c,
       current_diff = (list[i]->work/min_w)+(list[i]->makespan/min_c);
 
     XBT_DEBUG("%d : Diff of normalized values: %f (%f %f)",
-        list[i]->nworkstations+1, current_diff,
+        list[i]->nworkstations, current_diff,
         list[i]->makespan/min_c,list[i]->work/min_w);
 
     if (current_diff < min_diff){
@@ -150,7 +150,7 @@ int getBiCriteriaTradeoff(int size, Sched_info_t *list, double min_c,
     }
   }
 
-  XBT_DEBUG("best nhosts for both criteria is %d", bicriteria_nhosts+1);
+  XBT_DEBUG("best nhosts for both criteria is %d", bicriteria_nhosts);
   return bicriteria_nhosts;
 }
 
@@ -423,7 +423,7 @@ void bicpaSchedule(xbt_dynar_t dag) {
    *          w.r.t. CPA in terms of makespan and work.
    */
   for (i = 0; i < nworkstations; i++){
-    XBT_INFO("%d: %.3f (%.3f) %.3f (%.3f)", siList[i]->nworkstations,
+    XBT_VERB("%d: %.3f (%.3f) %.3f (%.3f)", siList[i]->nworkstations,
         siList[i]->makespan, siList[i]->makespan/cpa_makespan,
         siList[i]->work, siList[i]->work/cpa_work);
   }
@@ -441,35 +441,41 @@ void bicpaSchedule(xbt_dynar_t dag) {
   min_sum_nworkstations= getBiCriteriaTradeoff(nno_dom, no_dom_list,
       cpa_makespan, cpa_work, 0);
 
-  XBT_INFO("The four variants of biCPA assumes the following cluster sizes:");
-  XBT_INFO("  * biCPA-M: %d", best_makespan_nworkstations);
-  XBT_INFO("  * biCPA-W: %d", best_work_nworkstations);
-  XBT_INFO("  * biCPA-E: %d", perfect_equity_nworkstations);
-  XBT_INFO("  * biCPA-S: %d", min_sum_nworkstations);
+  XBT_VERB("The four variants of biCPA assumes the following cluster sizes:");
+  XBT_VERB("  * biCPA-M: %d", best_makespan_nworkstations);
+  XBT_VERB("  * biCPA-W: %d", best_work_nworkstations);
+  XBT_VERB("  * biCPA-E: %d", perfect_equity_nworkstations);
+  XBT_VERB("  * biCPA-S: %d", min_sum_nworkstations);
 
   mapping_time = getTime() - mapping_time;
 
   for (i = 0; i < nworkstations; i++){
     if (siList[i]->nworkstations == best_makespan_nworkstations)
-      printf("%f:%f:biCPA-M:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+      printf("%.3f:%.3f:biCPA-M:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
           platform_file, dagfile,
           siList[i]->makespan,
           siList[i]->work,
           siList[i]->peak_allocation);
     if (siList[i]->nworkstations == best_work_nworkstations)
-      printf("%f:%f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+      printf("%.3f:%.3f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
           platform_file, dagfile,
           siList[i]->makespan,
           siList[i]->work,
           siList[i]->peak_allocation);
     if (siList[i]->nworkstations == perfect_equity_nworkstations)
-      printf("%f:%f:biCPA-E:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+      printf("%.3f:%.3f:biCPA-E:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
           platform_file, dagfile,
           siList[i]->makespan,
           siList[i]->work,
           siList[i]->peak_allocation);
     if (siList[i]->nworkstations == min_sum_nworkstations)
-      printf("%f:%f:biCPA-S:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+      printf("%.3f:%.3f:biCPA-S:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
+          platform_file, dagfile,
+          siList[i]->makespan,
+          siList[i]->work,
+          siList[i]->peak_allocation);
+    if (siList[i]->nworkstations == nworkstations)
+      printf("*****:*****:  CPA  :%s:%s:%.3f:%.3f:%d\n",
           platform_file, dagfile,
           siList[i]->makespan,
           siList[i]->work,
