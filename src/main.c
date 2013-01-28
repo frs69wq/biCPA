@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  bicpaSchedule(dag);
+  schedule_with_biCPA(dag);
 
   xbt_dynar_foreach(dag, cursor, task) {
     SD_task_free_attribute(task);

@@ -8,7 +8,7 @@ typedef struct _SchedInfo {
   int peak_allocation;
 } *Sched_info_t;
 
-void bicpaSchedule(xbt_dynar_t dag);
+void schedule_with_biCPA(xbt_dynar_t dag);
 
 
 #endif /* BICPA_H_ */

@@ -26,6 +26,11 @@ Sched_info_t new_sched_info(int nworkstations, double makespan, double work,
   return s;
 }
 
+/*
+ * Run the simulation of a given 'dag' on a cluster that comprises
+ * 'nworkstations' workstations, build and return the data structure with the
+ * results of the schedule's simulation: makespan, work and peak resource usage.
+ */
 Sched_info_t simulate_schedule(xbt_dynar_t dag, int nworkstations){
   double makespan;
   int peak_allocation;
@@ -48,6 +53,10 @@ Sched_info_t simulate_schedule(xbt_dynar_t dag, int nworkstations){
   return s;
 }
 
+/*
+ * Just display the information related to the simulation of a schedule. This
+ * display is only available for certain verbosity levels.
+ */
 void print_sched_info(Sched_info_t s){
   XBT_VERB("[%d] makespan = %.3f, work = %.3f, peak_alloc = %d",
       s->nworkstations, s->makespan, s->work, s->peak_allocation);
@@ -83,75 +92,132 @@ int IworkCompareSchedInfo(const void *n1, const void *n2) {
     return 1;
 }
 
+/*
+ * Return the index of the schedule, in a list sorted by increasing makespan
+ * values, that minimizes the makespan without degrading the work achieved by
+ * the allocation procedure of the seminal CPA algorithm.
+ */
+int get_best_makespan_index(int nworkstations, Sched_info_t * list,
+    double cpa_work){
+  int i=0;
+
+  qsort(list, nworkstations, sizeof(Sched_info_t), ImakespanCompareSchedInfo);
+  while (list[i]->work > cpa_work)
+    i++;
+  return i;
+}
+
+/*
+ * Return the index of the schedule, in a list sorted by increasing work values,
+ * that minimizes the work without degrading the makespan achieved by the
+ * allocation procedure of the seminal CPA algorithm.
+ */
+int get_best_work_index(int nworkstations, Sched_info_t *list,
+    double cpa_makespan){
+  int i=0;
+
+  qsort(list, nworkstations, sizeof(Sched_info_t), IworkCompareSchedInfo);
+  while (list[i]->makespan > cpa_makespan)
+    i++;
+  return i;
+}
+
+/*
+ * Build a list of non-dominated schedules from all the available schedules. A
+ * non-dominated schedule is part of the Pareto front formed by the makespan and
+ * work achieved by the different schedules.
+ * This list of non-dominated schedules is built by:
+ *   - sorting the list of schedule results by increasing makespan values
+ *   - browsing this sorted list while considering the work values. If the work
+ *     achieved by the current schedule is less or equal than that of the last
+ *     non-dominated schedule, then it is also non-dominated. Indeed, there may
+ *     a loss in terms of makespan but there is also a gain in terms of work.
+ *     Otherwise, there is a loss on both metrics, and the schedule is then
+ *     considered as dominated.
+ */
 void get_non_dominated_schedules(int *nno_dom, Sched_info_t **no_dom_list,
     Sched_info_t *list){
   int i;
-  const int n = SD_workstation_get_number();
+  const int nworkstations = SD_workstation_get_number();
+
+  qsort(list, nworkstations, sizeof(Sched_info_t), ImakespanCompareSchedInfo);
 
   (*no_dom_list) = (Sched_info_t*) calloc (1, sizeof(Sched_info_t));
   (*no_dom_list)[0] = list[0];
   (*nno_dom)++;
 
-  for (i=1; i<n; i++){
-    if (list[i]->work<=(*no_dom_list)[(*nno_dom)-1]->work){
+  for (i = 1; i < nworkstations; i++){
+    if (list[i]->work <= (*no_dom_list)[(*nno_dom)-1]->work){
       (*no_dom_list) = (Sched_info_t*) realloc ((*no_dom_list),
           ((*nno_dom)+1)*sizeof(Sched_info_t));
       (*no_dom_list)[(*nno_dom)++] = list[i];
     }
   }
 }
-/* Return the */
-int get_best_makespan_index(int size, Sched_info_t *list, double cpa_work){
-  int i=0;
 
-  qsort(list, size, sizeof(Sched_info_t), ImakespanCompareSchedInfo);
-  while (list[i]->work > cpa_work)
-    i++;
-  return i;
-}
-
-int get_best_work_index(int size, Sched_info_t *list, double cpa_makespan){
-  int i=0;
-
-  qsort(list, size, sizeof(Sched_info_t), IworkCompareSchedInfo);
-  while (list[i]->makespan > cpa_makespan)
-    i++;
-  return i;
-}
-
-int getBiCriteriaTradeoff(int size, Sched_info_t *list, double min_c,
-                          double min_w, int e_or_s){
+/*
+ * Given a list of 'non_dominated_schedules', the makespan and work of the
+ * seminal CPA algorithm and a bi-criteria tradeoff to find (either perfect
+ * equity or the minimization of the sum, as set by the 'e_or_s' parameter),
+ * this function determines the number of workstations that leads to the desired
+ * tradeoff.
+ */
+int get_best_tradeoff_nworkstations(int nschedules, 
+    Sched_info_t *non_dominated_schedules,
+    double cpa_makespan, double cpa_work, int e_or_s){
   int i;
-  int bicriteria_nhosts = list[0]->nworkstations;
-  double min_diff, current_diff;
+  int bicriteria_nworkstations = non_dominated_schedules[0]->nworkstations;
+  double min, current;
 
+  /*
+   * Start by setting the minimum value of the tradeoff using that of the first
+   * schedule. For the perfect equity, this corresponds to the ratio of the work
+   * over the makespan, normalized by the values achieved by CPA. For the
+   * minimization of the sum, these two normalized values are added.
+   */
   if (e_or_s)
-    min_diff = fabs(1-((list[0]->work/min_w)/(list[0]->makespan/min_c)));
+    min = fabs(1 - ((non_dominated_schedules[0]->work / cpa_work) /
+        (non_dominated_schedules[0]->makespan / cpa_makespan)));
   else
-    min_diff = (list[0]->work/min_w)+(list[0]->makespan/min_c);
+    min = (non_dominated_schedules[0]->work / cpa_work) +
+    (non_dominated_schedules[0]->makespan / cpa_makespan);
 
-  XBT_DEBUG("%d : Diff of normalized values: %f (%f %f)",
-      list[0]->nworkstations, min_diff,
-      list[0]->makespan/min_c,list[0]->work/min_w);
 
-  for (i=1;i<size;i++){
+  XBT_DEBUG("[%d]: tradeoff = %f (norm. makespan = %.3f, norm. work = %.3f)",
+      non_dominated_schedules[0]->nworkstations, min,
+      non_dominated_schedules[0]->makespan / cpa_makespan,
+      non_dominated_schedules[0]->work / cpa_work);
+
+  /*
+   * Then browse the other non-dominated schedules. If one of them leads to a
+   * smaller value for the tradeoff, update the minimum value.
+   */
+  for (i = 1; i < nschedules; i++){
     if (e_or_s)
-      current_diff = fabs(1-((list[i]->work/min_w)/(list[i]->makespan/min_c)));
+      current = fabs(1 - ((non_dominated_schedules[i]->work / cpa_work) /
+          (non_dominated_schedules[i]->makespan / cpa_makespan)));
     else
-      current_diff = (list[i]->work/min_w)+(list[i]->makespan/min_c);
+      current = (non_dominated_schedules[i]->work / cpa_work) +
+      (non_dominated_schedules[i]->makespan / cpa_makespan);
 
-    XBT_DEBUG("%d : Diff of normalized values: %f (%f %f)",
-        list[i]->nworkstations, current_diff,
-        list[i]->makespan/min_c,list[i]->work/min_w);
+    XBT_DEBUG("[%d]: tradeoff = %f (norm. makespan = %.3f, norm. work = %.3f)",
+        non_dominated_schedules[i]->nworkstations, current,
+        non_dominated_schedules[i]->makespan / cpa_makespan,
+        non_dominated_schedules[i]->work / cpa_work);
 
-    if (current_diff < min_diff){
-      min_diff = current_diff;
-      bicriteria_nhosts = list[i]->nworkstations;
+    if (current < min){
+      min = current;
+      bicriteria_nworkstations = non_dominated_schedules[i]->nworkstations;
     }
   }
 
-  XBT_DEBUG("best nhosts for both criteria is %d", bicriteria_nhosts);
-  return bicriteria_nhosts;
+  /*
+   * Return the number of workstations that leads to the minimum value for the
+   * desired bi-criteria tradeoff.
+   */
+  XBT_VERB("Best tradeoff (%.3f) is achived with %d workstations in the "
+      "cluster", min, bicriteria_nworkstations);
+  return bicriteria_nworkstations;
 }
 
 /*
@@ -213,8 +279,8 @@ void set_multiple_allocations(xbt_dynar_t dag) {
   XBT_VERB("Initial values for TA and TCP are (%.3f, %.3f)", TA, TCP);
 
   /*
-   * Loop to dynamically change the assumed size of the target cluster from 1 to
-   * the total number of workstations ('nworkstations'). This impacts the
+   * Loop to dynamically change the assumed size of the target cluster from 1
+   * to the total number of workstations ('nworkstations'). This impacts the
    * computation of the average area TA.
    */
   while (current_nworkstations <= nworkstations) {
@@ -272,9 +338,9 @@ void set_multiple_allocations(xbt_dynar_t dag) {
             SD_task_get_name(max_BL_child), n);
 
         /*
-         * Estimate what would be the 'current_gain' in terms of reduction of the
-         * execution time if the task is allocated on one more workstation. If
-         * the task is already allocated on the full cluster, this
+         * Estimate what would be the 'current_gain' in terms of reduction of
+         * the execution time if the task is allocated on one more workstation.
+         * If the task is already allocated on the full cluster, this
          * 'current_gain' is zero.
          */
         if (n < nworkstations){
@@ -355,9 +421,8 @@ void set_multiple_allocations(xbt_dynar_t dag) {
 }
 
 
-void bicpaSchedule(xbt_dynar_t dag) {
-  unsigned int i;
-  int j, tmp;
+void schedule_with_biCPA(xbt_dynar_t dag) {
+  unsigned int i, j;
   int best_makespan_nworkstations, best_work_nworkstations;
   int perfect_equity_nworkstations, min_sum_nworkstations;
   const int nworkstations = SD_workstation_get_number();
@@ -428,17 +493,20 @@ void bicpaSchedule(xbt_dynar_t dag) {
         siList[i]->work, siList[i]->work/cpa_work);
   }
 
-  tmp = get_best_work_index(nworkstations, siList, cpa_makespan);
-  best_work_nworkstations = siList[tmp]->nworkstations;
+  best_work_nworkstations =
+      siList[get_best_work_index(nworkstations,
+          siList, cpa_makespan)]->nworkstations;
 
-  tmp = get_best_makespan_index(nworkstations, siList, cpa_work);
-  best_makespan_nworkstations = siList[tmp]->nworkstations;
+  best_makespan_nworkstations =
+      siList[get_best_makespan_index(nworkstations,
+          siList, cpa_work)]->nworkstations;
 
   get_non_dominated_schedules(&nno_dom, &no_dom_list, siList);
-  perfect_equity_nworkstations = getBiCriteriaTradeoff(nno_dom, no_dom_list,
-      cpa_makespan, cpa_work, 1);
+  perfect_equity_nworkstations =
+      get_best_tradeoff_nworkstations(nno_dom, no_dom_list,
+          cpa_makespan, cpa_work, 1);
 
-  min_sum_nworkstations= getBiCriteriaTradeoff(nno_dom, no_dom_list,
+  min_sum_nworkstations= get_best_tradeoff_nworkstations(nno_dom, no_dom_list,
       cpa_makespan, cpa_work, 0);
 
   XBT_VERB("The four variants of biCPA assumes the following cluster sizes:");
@@ -449,6 +517,13 @@ void bicpaSchedule(xbt_dynar_t dag) {
 
   mapping_time = getTime() - mapping_time;
 
+  /*
+   * Display the output of the function by retrieving the scheduling results
+   * from 'siList' for the respective number of workstations of the four
+   * variants of the biCPA algorithm. For comparison purposes, the results
+   * achieved by the seminal CPA algorithm (i.e., using the whole cluster to
+   * determine the tasks' allocations) are also displayed.
+   */
   for (i = 0; i < nworkstations; i++){
     if (siList[i]->nworkstations == best_makespan_nworkstations)
       printf("%.3f:%.3f:biCPA-M:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
@@ -481,16 +556,6 @@ void bicpaSchedule(xbt_dynar_t dag) {
           siList[i]->work,
           siList[i]->peak_allocation);
   }
-
-  //  set_allocations_from_iteration(dag, best_work_nworkstations);
-//  map_allocations(dag);
-//  s = simulate_schedule(dag, best_work_nworkstations);
-//  print_sched_info(s);
-//  printf("%f:%f:biCPA-W:%s:%s:%.3f:%.3f:%d\n", alloc_time, mapping_time,
-//      platform_file, dagfile,
-//      s->makespan, s->work, s->peak_allocation);
-//  free(s);
-//  reset_simulation (dag);
 
   free(no_dom_list);
   for (i=0; i < nworkstations; i++)
