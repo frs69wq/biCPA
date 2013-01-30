@@ -1,3 +1,10 @@
+/******************************************************************************
+ * Copyright (c) 2010-2013. F. Suter
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the license (GNU LGPL 2.1) which comes with this package.
+ *****************************************************************************/
 #ifndef TASK_H_
 #define TASK_H_
 #include "simdag/simdag.h"

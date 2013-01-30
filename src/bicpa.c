@@ -1,3 +1,10 @@
+/******************************************************************************
+ * Copyright (c) 2010-2013. F. Suter
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the license (GNU LGPL 2.1) which comes with this package.
+ *****************************************************************************/
 #include <math.h>
 #include <string.h>
 #include "simdag/simdag.h"
@@ -438,9 +445,9 @@ void schedule_with_biCPA(xbt_dynar_t dag) {
    * First step: Determine multiple allocations for each task, one for each
    * assumed size of the target cluster between 1 and nworkstations.
    */
-  alloc_time = getTime();
+  alloc_time = get_time();
   set_multiple_allocations (dag);
-  alloc_time = getTime() - alloc_time;
+  alloc_time = get_time() - alloc_time;
   XBT_VERB("Allocations built in %f seconds", alloc_time);
 
   /* Display all allocations in DEBUG mode */
@@ -458,7 +465,7 @@ void schedule_with_biCPA(xbt_dynar_t dag) {
    * target cluster. Store the performance metrics (makespan, work, peak
    * resource usage) for each of them.
    */
-  mapping_time = getTime();
+  mapping_time = get_time();
 
   for (j = 1; j <= nworkstations; j++){
     set_allocations_from_iteration(dag, j);
@@ -515,7 +522,7 @@ void schedule_with_biCPA(xbt_dynar_t dag) {
   XBT_VERB("  * biCPA-E: %d", perfect_equity_nworkstations);
   XBT_VERB("  * biCPA-S: %d", min_sum_nworkstations);
 
-  mapping_time = getTime() - mapping_time;
+  mapping_time = get_time() - mapping_time;
 
   /*
    * Display the output of the function by retrieving the scheduling results
