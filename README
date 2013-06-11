@@ -9,7 +9,7 @@ Requires SimGrid (version 3.9 or earlier):
 * http://simgrid.gforge.inria.fr
 * http://simgrid.gforge.inria.fr/download.html
 * 101 tutorial on the used SimDAG API:
-  * http://simgrid.gforge.inria.fr/tutorials/101/simdag-101.pdf
+  * http://simgrid.gforge.inria.fr/tutorials/simdag-101.pdf
 
 The command line accepts three parameters:
 * --platform <platform file>: the description of the targer cluster in the
